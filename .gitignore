@@ -8,3 +8,5 @@ packs/
 node_modules/
 *.log
 NOTES-private.md
+server/rag-eval.cases.json
+server/node_modules/

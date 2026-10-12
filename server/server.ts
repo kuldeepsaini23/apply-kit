@@ -3,6 +3,7 @@
 // Run: bun E:\Work\job-hunt\extension\server\server.ts   (or start.cmd)
 import { readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
 import { join } from "node:path";
+import { Index, asContext } from "./rag";
 
 const PORT = 4777;
 const DIR = import.meta.dir;
@@ -69,11 +70,32 @@ function packFor(url = "", company = ""): Pack | undefined {
     || packs.find((p) => company && p.company.toLowerCase().split(/\s+/)[0] === company.toLowerCase().split(/\s+/)[0]);
 }
 
-function jobBlock(b: any) {
+// ---------- RAG over your own notes ----------
+// "docs" in config.json (files or folders of .md). Indexed in the background at startup, cached in data/.
+let rag: Index | null = null;
+const ragDocs = (): string[] => (existsSync(CONFIG_FILE) ? JSON.parse(readFileSync(CONFIG_FILE, "utf8")).docs ?? [] : []);
+const ragReady = (async () => {
+  const docs = ragDocs();
+  if (!docs.length) return;
+  const t = Date.now();
+  rag = await Index.build(docs, join(DATA, "rag-index.json"));
+  console.log(`RAG: ${rag.chunks.length} chunks indexed in ${Date.now() - t}ms`);
+})().catch((e) => console.error("RAG index failed:", e.message));
+
+async function retrieved(query: string, k = 8) {
+  await ragReady;
+  if (!rag || !query.trim()) return "";
+  const hits = await rag.search(query.slice(0, 2000), k, "hybrid");
+  return `\n# RELEVANT FACTS FROM MY NOTES (retrieved; background only: use them when they fit, never contradict the HARD RULES, never mention incidents framed as mistakes)\n${asContext(hits)}`;
+}
+
+async function jobBlock(b: any, extraQuery = "") {
   const pack = packFor(b.url, b.company);
+  const facts = await retrieved([extraQuery, b.role, b.company, String(b.jd || "").slice(0, 1500)].filter(Boolean).join("\n"));
   return [
     `Company: ${b.company || "?"}`, `Role: ${b.role || "?"}`, `URL: ${b.url || "?"}`,
     pack ? `\n# MY PREPARED NOTES FOR THIS COMPANY (use these first)\n${pack.body.slice(0, 6000)}` : "",
+    facts,
     `\n# JOB PAGE TEXT\n${String(b.jd || "").slice(0, 14000)}`,
   ].join("\n");
 }
@@ -153,6 +175,12 @@ const send = (req: Request, body: any, status = 200) =>
 const routes: Record<string, (b: any) => Promise<any> | any> = {
   "GET /api/health": () => ({ ok: true, model: MODEL }),
   "GET /api/config": () => (existsSync(CONFIG_FILE) ? JSON.parse(readFileSync(CONFIG_FILE, "utf8")) : {}),
+  // Debug/inspect retrieval: {q, k?, mode?: "bm25" | "vector" | "hybrid"}
+  "POST /api/rag/search": async (b) => {
+    await ragReady;
+    if (!rag) return { error: 'no docs configured (config.json "docs")' };
+    return (await rag.search(String(b.q || ""), Number(b.k) || 6, b.mode || "hybrid")).map(({ vec, tokens, ...h }) => h);
+  },
   "GET /api/packs": () => loadPacks().map(({ body, ...p }) => p),
   "GET /api/applications": () => readApps(),
 
@@ -225,7 +253,7 @@ Return ONLY JSON: {"domain":"","email_pattern":"","pattern_confidence":"high|med
     const p = b.person || {};
     const channel = b.channel || "email";
     const isRef = p.relation === "connection";
-    const prompt = `${jobBlock(b)}
+    const prompt = `${await jobBlock(b)}
 
 # PERSON
 Name: ${p.name}. Title: ${p.title || p.position || "?"}. Relation: ${isRef ? `my LinkedIn connection${p.connectedOn ? ` since ${p.connectedOn}` : ""}` : p.relation || "cold"}.
@@ -261,7 +289,7 @@ Return ONLY JSON: {"subject":"${channel === "email" ? "..." : ""}","body":"..."}
   "POST /api/answer": async (b) => {
     const qs = (b.questions || []).slice(0, 25);
     if (!qs.length) return { answers: [] };
-    const prompt = `${jobBlock(b)}
+    const prompt = `${await jobBlock(b, qs.map((q: any) => q.question).join(" "))}
 
 # QUESTIONS ON THE APPLICATION FORM
 ${qs.map((q: any) => `- id ${q.id} [${q.kind}${q.maxLength ? `, max ${q.maxLength} chars` : ""}]: ${q.question}`).join("\n")}
@@ -272,7 +300,7 @@ Return ONLY JSON: {"answers":[{"id":"...","answer":"..."}]}`;
   },
 
   "POST /api/score": async (b) => {
-    const prompt = `${jobBlock(b)}
+    const prompt = `${await jobBlock(b)}
 
 Score my interview chance for this job with the rubric. Be honest and specific; mention dealbreakers.
 Return ONLY JSON: {"score":0,"parts":{"stack":0,"exp":0,"loc":0,"domain":0,"fresh":0},"reasons":["...","...","..."],"gaps":["..."],"verdict":"apply|apply + DM|skip","lead_with":"the one proof point to lead with"}`;
@@ -280,7 +308,7 @@ Return ONLY JSON: {"score":0,"parts":{"stack":0,"exp":0,"loc":0,"domain":0,"fres
   },
 
   "POST /api/dm": async (b) => {
-    const prompt = `${jobBlock(b)}
+    const prompt = `${await jobBlock(b)}
 ${b.person ? `Person to message: ${b.person}` : "Person: the founder, hiring manager or recruiter if the page names one, else write it to the team."}
 
 Write two outreach messages: (1) a LinkedIn/X DM: casual, lowercase, under 70 words; (2) an email under 120 words with a subject line. Mention one specific thing about them or the product, and one proof point of mine that fits. End with a simple ask. No emojis, no dashes.

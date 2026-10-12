@@ -1,0 +1,12 @@
+[
+ {
+  "q": "database migration with zero downtime",
+  "match": "migrat",
+  "kind": "exact"
+ },
+ {
+  "q": "How did you move users to the new system without an outage?",
+  "match": "migrat|downtime",
+  "kind": "paraphrase"
+ }
+]
