@@ -1,0 +1,10 @@
+# Personal data: never commit
+profile.js
+resume.pdf
+server/context.md
+server/config.json
+server/data/
+packs/
+node_modules/
+*.log
+NOTES-private.md

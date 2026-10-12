@@ -1,0 +1,73 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><title>Apply Kit test forms</title></head>
+<body>
+<h1>Software Engineer, Platform</h1>
+
+<!-- Greenhouse classic -->
+<form id="gh">
+  <div class="field"><label for="first_name">First Name <span>*</span></label><input id="first_name" name="job_application[first_name]" required></div>
+  <div class="field"><label for="last_name">Last Name *</label><input id="last_name" name="job_application[last_name]" required></div>
+  <div class="field"><label for="email">Email *</label><input id="email" type="email" name="job_application[email]"></div>
+  <div class="field"><label for="phone">Phone</label><input id="phone" type="tel" name="job_application[phone]"></div>
+  <div class="field"><label>Resume/CV *</label><button type="button">Attach</button><input type="file" id="resume" style="display:none"></div>
+  <div class="field"><label>Cover Letter</label><input type="file" id="cover" style="display:none"></div>
+  <div class="field"><label for="li">LinkedIn Profile</label><input id="li" name="job_application[answers_attributes][0][text_value]"></div>
+  <div class="field"><label for="web">Website</label><input id="web"></div>
+  <div class="field"><label for="hear">How did you hear about this job? *</label><input id="hear" required></div>
+  <div class="field"><label for="auth">Are you legally authorized to work in the United States? *</label>
+    <select id="auth"><option value="">Select...</option><option value="1">Yes</option><option value="0">No</option></select></div>
+  <div class="field"><label for="spon">Will you now or in the future require sponsorship? *</label>
+    <select id="spon"><option value="">Select...</option><option>Yes</option><option>No</option></select></div>
+  <div class="field"><label for="gender">Gender</label><select id="gender"><option value="">Select</option><option>Male</option></select></div>
+  <div class="field"><label for="why">Why do you want to work at Acme? *</label><textarea id="why" required></textarea></div>
+</form>
+
+<!-- Lever -->
+<form id="lever">
+  <ul>
+    <li class="application-question"><label><div class="application-label">Full name✱</div><div class="application-field"><input name="name" type="text"></div></label></li>
+    <li class="application-question"><label><div class="application-label">Current company</div><div class="application-field"><input name="org" type="text"></div></label></li>
+    <li class="application-question"><label><div class="application-label">GitHub URL</div><div class="application-field"><input name="urls[GitHub]" type="text"></div></label></li>
+    <li class="application-question"><label><div class="application-label">Twitter URL</div><div class="application-field"><input name="urls[Twitter]" type="text"></div></label></li>
+    <li class="application-question"><label><div class="application-label">Portfolio URL</div><div class="application-field"><input name="urls[Portfolio]" type="text"></div></label></li>
+    <li class="application-question"><div class="application-label">Are you willing to relocate?</div>
+      <div><label><input type="radio" name="cards[0][field0]" value="Yes"> Yes</label><label><input type="radio" name="cards[0][field0]" value="No"> No</label></div></li>
+    <li class="application-question"><div class="application-label">Are you authorized to work in India?</div>
+      <div><label><input type="radio" name="cards[0][field1]" value="Yes"> Yes</label><label><input type="radio" name="cards[0][field1]" value="No"> No</label></div></li>
+  </ul>
+</form>
+
+<!-- Indian form -->
+<form id="india">
+  <label for="exp">Total years of experience</label><input id="exp" type="number">
+  <label for="cctc">Current CTC (in LPA)</label><input id="cctc">
+  <label for="ectc">Expected CTC</label><input id="ectc">
+  <label for="np">Notice period (days)</label><input id="np" type="number">
+  <label for="loc">Current location</label><input id="loc">
+  <label for="country">Country</label><select id="country"><option>Select</option><option>United States</option><option value="IN">India</option></select>
+  <label for="start">Earliest start date</label><input id="start" type="date">
+  <label for="college">College / University</label><input id="college">
+  <label for="deg">Highest degree</label><input id="deg">
+  <label for="grad">Graduation year</label><input id="grad" type="number">
+  <label for="leave">Why are you looking for a change?</label><textarea id="leave"></textarea>
+  <label for="ctitle">Current designation</label><input id="ctitle">
+  <label for="pre">Name</label><input id="pre" value="Already typed">
+</form>
+
+<pre id="out"></pre>
+<script src="../profile.example.js"></script>
+<script src="../fill.js"></script>
+<script>
+  const r = __applyKit.fill({ resumeB64: btoa("%PDF-1.4 test"), currency: "INR" });
+  const vals = {};
+  document.querySelectorAll("input,select,textarea").forEach((el, i) => {
+    const k = el.id || el.name || "#" + i;
+    if (el.type === "radio") { if (el.checked) vals[el.name] = el.value; return; }
+    if (el.type === "file") { vals[k] = el.files.length ? el.files[0].name : ""; return; }
+    vals[k] = el.tagName === "SELECT" ? el.options[el.selectedIndex].text : el.value;
+  });
+  const s = __applyKit.score("Senior? No. We are a seed-stage YC startup building AI agents. Remote in India. 2+ years of experience with TypeScript, React, Node.js, PostgreSQL, AWS. Nice to have: Python. Posted 3 days ago.");
+  const open = __applyKit.collectOpen();
+  document.getElementById("out").textContent = JSON.stringify({ open, result: r, vals, score: s, page: __applyKit.pageInfo().role }, null, 1);
+</script>
+</body></html>
