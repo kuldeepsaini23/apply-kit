@@ -65,6 +65,12 @@
   .person .nm { font-weight: 600; } .person .tt { font-size: 12.5px; color: var(--muted-foreground); }
   .person .why { font-size: 12.5px; margin-top: 4px; }
   .person .acts { justify-content: flex-start; margin-top: 8px; }
+  .person .chips { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+  .chip { display: inline-flex; align-items: center; gap: 6px; height: 26px; padding: 0 9px; border: 1px solid var(--border); border-radius: 8px; font-size: 12.5px; color: var(--foreground); text-decoration: none; background: var(--muted); }
+  .chip:hover { border-color: var(--ring, var(--border)); }
+  .chip .st { font-size: 11px; color: var(--muted-foreground); }
+  .chip .st.verified, .chip .st.published { color: var(--success-ink); }
+  .chip .st.likely { color: var(--warn-ink); }
   .composer { margin-top: 10px; display: grid; gap: 8px; }
   .composer textarea.input { min-height: 160px; font-size: 13px; }
   .drop { display: grid; place-items: center; gap: 4px; text-align: center; padding: 22px; border: 1.5px dashed var(--border); border-radius: 12px; cursor: pointer; transition: all .15s; color: var(--muted-foreground); }
@@ -110,6 +116,8 @@
   <symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></symbol>
   <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
   <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.9M16 3.1a4 4 0 0 1 0 7.8"/></symbol>
+  <symbol id="i-phone" viewBox="0 0 24 24"><path d="M22 16.9v3a2 2 0 0 1-2.2 2 19.8 19.8 0 0 1-8.6-3.1 19.5 19.5 0 0 1-6-6A19.8 19.8 0 0 1 2.1 4.2 2 2 0 0 1 4.1 2h3a2 2 0 0 1 2 1.7c.1.9.4 1.8.7 2.7a2 2 0 0 1-.5 2.1L8 9.8a16 16 0 0 0 6 6l1.3-1.3a2 2 0 0 1 2.1-.4c.9.3 1.8.6 2.7.7a2 2 0 0 1 1.7 2z"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 11.5a8.4 8.4 0 0 1-12.4 7.4L3 21l2.1-5.6A8.5 8.5 0 1 1 21 11.5z"/></symbol>
   <symbol id="i-mail" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="m22 7-10 6L2 7"/></symbol>
   <symbol id="i-in" viewBox="0 0 24 24"><path d="M16 8a6 6 0 0 1 6 6v7h-4v-7a2 2 0 0 0-4 0v7h-4v-7a6 6 0 0 1 6-6z"/><rect x="2" y="9" width="4" height="12"/><circle cx="4" cy="4" r="2"/></symbol>
   <symbol id="i-xlogo" viewBox="0 0 24 24"><path d="M4 4l16 16M20 4 4 20"/></symbol>
@@ -133,6 +141,7 @@
     </div>
     <nav class="tabs" role="tablist">
       <button class="tab" role="tab" data-tab="pipeline" aria-selected="true">Pipeline <span class="count" id="c-ready">–</span></button>
+      <button class="tab" role="tab" data-tab="jobs">Jobs <span class="count" id="c-jobs">–</span></button>
       <button class="tab" role="tab" data-tab="quick">Any job</button>
       <button class="tab" role="tab" data-tab="apps">Applications <span class="count" id="c-apps">–</span></button>
       <button class="tab" role="tab" data-tab="network">Network <span class="count" id="c-out">–</span></button>
@@ -156,6 +165,31 @@
       <div class="card stat"><span class="k">Days left</span><span class="v" id="s-days">–</span><div class="progress" style="margin-top:6px"><b id="s-daysbar" style="width:0;background:var(--warn)"></b></div></div>
     </div>
     <div class="card list" id="packs"></div>
+  </section>
+
+  <!-- JOBS -->
+  <section data-panel="jobs" hidden>
+    <div class="page-head">
+      <div>
+        <h1>Jobs</h1>
+        <p>Live roles from the board scanner. <b>Find HR</b> finds the people who hire there and their best contact: phone, then email, then LinkedIn. Nothing is ever sent.</p>
+      </div>
+      <button class="btn brand" id="j-scan"><svg class="i"><use href="#i-refresh"/></svg>Scan now</button>
+    </div>
+    <div class="card row" style="flex-wrap:wrap;gap:12px;margin-bottom:12px">
+      <label class="row" style="gap:8px"><input type="checkbox" id="j-auto"> <b>Auto find HR</b></label>
+      <span class="muted xs">for the newest jobs, up to</span>
+      <input class="input" id="j-perday" type="number" min="1" max="50" style="width:70px;height:30px">
+      <span class="muted xs">companies a day (each uses about a minute of your Claude plan)</span>
+      <span class="grow"></span>
+      <span class="muted xs" id="j-meta"></span>
+    </div>
+    <div class="card" style="padding:6px;overflow-x:auto">
+      <table>
+        <thead><tr><th>Company</th><th>Role</th><th class="hide-sm">Location</th><th>Posted</th><th>People</th></tr></thead>
+        <tbody id="jobs"></tbody>
+      </table>
+    </div>
   </section>
 
   <!-- ANY JOB -->
@@ -526,7 +560,19 @@ const liSearch = (q) => `https://www.linkedin.com/search/results/people/?keyword
 const xSearch = (q) => `https://x.com/search?q=${encodeURIComponent(q)}&f=user`;
 const gmail = (to, su, body) => `https://mail.google.com/mail/?authuser=${encodeURIComponent(MY_EMAIL())}&view=cm&fs=1&to=${encodeURIComponent(to || "")}&su=${encodeURIComponent(su || "")}&body=${encodeURIComponent(body || "")}`;
 const typeBadge = { founder: "brand", hiring_manager: "ai", engineer: "", recruiter: "warn" };
-const typeLabel = { founder: "Founder", hiring_manager: "Hiring manager", engineer: "Engineer", recruiter: "Recruiter" };
+const typeLabel = { founder: "Founder", hiring_manager: "Hiring manager", engineer: "Engineer", recruiter: "Recruiter", other: "Other" };
+const contactOf = (p, kind) => p.contacts?.find((c) => c.kind === kind)?.value || "";
+const waLink = (phone, text = "") => `https://wa.me/${phone.replace(/\D/g, "")}${text ? "?text=" + encodeURIComponent(text) : ""}`;
+const STATUS_TIP = { verified: "checked by a verifier", published: "printed on a public page", likely: "the company accepts any address, so it can't be checked", guessed: "pattern guess, not checked" };
+// One contact as a clickable chip; hover shows where it came from.
+function chip(c) {
+  const st = c.status ? `<span class="st ${c.status}" title="${esc(STATUS_TIP[c.status])}">${esc(c.status)}</span>` : "";
+  const tip = `title="Source: ${esc(c.source)}"`;
+  if (c.kind === "phone") return `<a class="chip" ${tip} href="tel:${esc(c.value)}">${ic("phone")}${esc(c.value)}${st}</a><a class="chip" ${tip} href="${esc(waLink(c.value))}" target="_blank">${ic("chat")}WhatsApp</a>`;
+  if (c.kind === "email" || c.kind === "inbox") return `<a class="chip" ${tip} href="${esc(gmail(c.value, "", ""))}" target="_blank">${ic("mail")}${esc(c.value)}${st}</a>`;
+  if (c.kind === "linkedin") return `<a class="chip" ${tip} href="${esc(c.value)}" target="_blank">${ic("in")}LinkedIn</a>`;
+  return `<a class="chip" ${tip} href="${esc(c.value)}" target="_blank">${ic("xlogo")}X</a>`;
+}
 
 async function loadPeople(pack, refresh) {
   const box = $("sh-people");
@@ -560,25 +606,29 @@ function renderPeople() {
         <div class="grow"><div class="nm">${esc(p.name)} <span class="badge ${typeBadge[p.type] || ""}">${typeLabel[p.type] || esc(p.type || "")}</span></div>
         <div class="tt">${esc(p.title)}</div>
         ${p.why ? `<div class="why">${esc(p.why)}</div>` : ""}</div>
-        ${p.source ? `<a class="btn sm ghost icon" href="${esc(p.source)}" target="_blank" title="Source">${ic("ext")}</a>` : ""}
       </div>
+      ${p.contacts?.length ? `<div class="chips">${p.contacts.map(chip).join("")}</div>` : `<div class="muted xs" style="margin-top:6px">No contact found yet. Try LinkedIn search below.</div>`}
       <div class="acts">
+        ${contactOf(p, "phone") ? `<button class="btn sm brand" data-p="${i}" data-ch="whatsapp">${ic("chat")}WhatsApp draft</button>` : ""}
         <button class="btn sm" data-p="${i}" data-ch="email">${ic("mail")}Email</button>
         <button class="btn sm" data-p="${i}" data-ch="linkedin">${ic("in")}LinkedIn</button>
         <button class="btn sm" data-p="${i}" data-ch="x">${ic("xlogo")}X</button>
-        ${p.email_guess ? `<span class="badge" title="Guessed from the company's email pattern, not verified">${esc(p.email_guess)} · guess</span>` : ""}
       </div>
       <div class="composer" id="cmp-p${i}" hidden></div>
     </div>`).join("");
 
+  const pat = meta.pattern ? ` · Email format <b>${esc(meta.pattern.pattern)}@${esc(meta.domain)}</b> (from ${esc(meta.pattern.from)}${meta.pattern.matches ? `, ${meta.pattern.matches} seen` : ""})` : "";
   $("sh-people").innerHTML = `
     ${connections.length ? `<div class="sec">Referral: people you know here</div>${conns}<div style="height:10px"></div>` : ""}
     <div class="sec"><span class="grow">People to contact</span>
       ${meta.fetchedAt ? `<span class="muted xs" style="text-transform:none;letter-spacing:0;font-weight:400">found ${esc(meta.fetchedAt)}</span>` : ""}
       <button class="btn sm ghost" id="pp-refresh" title="Search again">${ic("refresh")}</button></div>
-    ${meta.notes ? `<div class="muted xs" style="margin:-2px 0 10px">${esc(meta.notes)}${meta.email_pattern ? ` · Email pattern: <b>${esc(meta.email_pattern)}</b>${meta.domain ? " @" + esc(meta.domain) : ""} (${esc(meta.pattern_confidence || "?")} confidence)` : ""}</div>` : ""}
+    ${meta.notes || pat ? `<div class="muted xs" style="margin:-2px 0 10px">${esc(meta.notes || "")}${pat}</div>` : ""}
     ${ppl || `<div class="muted xs">No named people found in public sources. Try the LinkedIn search below.</div>`}
+    ${meta.inboxes?.length ? `<div class="sec" style="margin-top:12px">Company contacts</div><div class="chips" style="display:flex;flex-wrap:wrap;gap:6px">${meta.inboxes.map(chip).join("")}</div>` : ""}
+    ${meta.errors?.length ? `<div class="muted xs" style="margin-top:8px">Some sources failed: ${esc(meta.errors.join("; "))}</div>` : ""}
     <div class="row" style="margin-top:6px;flex-wrap:wrap">
+      ${meta.apolloSearch ? `<a class="btn sm" href="${esc(meta.apolloSearch)}" target="_blank">${ic("ext")}Find on Apollo</a>` : ""}
       <a class="btn sm" href="${liSearch(pack.company.replace(/\(.*?\)/g, "") + " recruiter")}" target="_blank">${ic("in")}Search recruiters on LinkedIn</a>
       <a class="btn sm" href="${liSearch(pack.company.replace(/\(.*?\)/g, "") + " engineering manager")}" target="_blank">${ic("in")}Search eng managers</a>
     </div>`;
@@ -589,25 +639,28 @@ $("sh-people").addEventListener("click", async (e) => {
   const b = e.target.closest("button[data-ch]"); if (!b) return;
   const isConn = b.dataset.c !== undefined;
   const idx = +(isConn ? b.dataset.c : b.dataset.p);
-  const person = isConn ? { ...current.connections[idx], relation: "connection", title: current.connections[idx].position } : { ...current.people[idx], relation: current.people[idx].type };
+  const raw = isConn ? null : current.people[idx];
+  const person = isConn ? { ...current.connections[idx], relation: "connection", title: current.connections[idx].position }
+    : { ...raw, relation: raw.type, email: contactOf(raw, "email"), linkedin: contactOf(raw, "linkedin"), x: contactOf(raw, "x"), phone: contactOf(raw, "phone"),
+        emailGuessed: raw.contacts?.find((c) => c.kind === "email")?.status === "guessed" };
   const ch = b.dataset.ch;
   const box = $(`cmp-${isConn ? "c" : "p"}${idx}`);
   box.hidden = false;
-  box.innerHTML = `<div class="muted xs row"><span class="spin"></span>Claude is writing a ${ch === "email" ? "email" : ch === "x" ? "X DM" : "LinkedIn message"}… (~10s)</div>`;
+  box.innerHTML = `<div class="muted xs row"><span class="spin"></span>Claude is writing a ${ch === "email" ? "email" : ch === "x" ? "X DM" : ch === "whatsapp" ? "WhatsApp message" : "LinkedIn message"}… (~10s)</div>`;
   try {
     const d = await api("/api/outreach/draft", { company: current.pack.company, role: current.pack.role, url: current.pack.apply || current.pack.link, person, channel: ch });
-    const to = ch === "email" ? (person.email || person.email_guess || "") : "";
+    const to = ch === "email" ? (person.email || "") : "";
     const profile = ch === "linkedin" ? (person.url || person.linkedin || liSearch(`${person.name} ${current.pack.company}`)) : ch === "x" ? (person.x || xSearch(`${person.name} ${current.pack.company}`)) : "";
     box.innerHTML = `
       ${ch === "email" ? `<input class="input" data-k="to" value="${esc(to)}" placeholder="To (email)"><input class="input" data-k="su" value="${esc(d.subject || "")}" placeholder="Subject">` : ""}
       <textarea class="input" data-k="body">${esc(d.body || "")}</textarea>
       <div class="row" style="flex-wrap:wrap">
-        ${ch === "email" ? `<button class="btn sm brand" data-do="gmail">${ic("mail")}Open in Gmail</button>` : `<a class="btn sm brand" data-do="open" href="${esc(profile)}" target="_blank">${ic(ch === "x" ? "xlogo" : "in")}Open ${ch === "x" ? "X" : "LinkedIn"}${(ch === "x" ? person.x : person.url || person.linkedin) ? "" : " search"}</a>`}
+        ${ch === "email" ? `<button class="btn sm brand" data-do="gmail">${ic("mail")}Open in Gmail</button>` : ch === "whatsapp" ? `<button class="btn sm brand" data-do="wa">${ic("chat")}Open WhatsApp</button>` : `<a class="btn sm brand" data-do="open" href="${esc(profile)}" target="_blank">${ic(ch === "x" ? "xlogo" : "in")}Open ${ch === "x" ? "X" : "LinkedIn"}${(ch === "x" ? person.x : person.url || person.linkedin) ? "" : " search"}</a>`}
         <button class="btn sm" data-do="copy">${ic("copy")}Copy</button>
         <button class="btn sm" data-do="sent">${ic("check")}Mark sent</button>
-        ${ch === "email" && !person.email ? `<span class="muted xs">Email is a guess. Prefer LinkedIn/X if you can find them.</span>` : ""}
+        ${ch === "email" && (!person.email || person.emailGuessed) ? `<span class="muted xs">This address is a guess from the company's email format. Prefer LinkedIn/X if you can find them.</span>` : ""}
       </div>`;
-    box.dataset.person = JSON.stringify({ name: person.name, title: person.title || person.position || "", relation: person.relation });
+    box.dataset.person = JSON.stringify({ name: person.name, title: person.title || person.position || "", relation: person.relation, phone: person.phone || "" });
     box.dataset.ch = ch;
   } catch (err) {
     box.innerHTML = `<div class="muted xs">Draft failed: ${esc(err.message)}</div>`;
@@ -623,6 +676,11 @@ $("sh-people").addEventListener("click", async (e) => {
     window.open(gmail(v("to"), v("su"), v("body") + "\n\nResume attached."), "_blank");
     toast("Gmail compose opened", "Attach your resume, check the address, then send. Come back and hit Mark sent.");
   }
+  if (b.dataset.do === "wa") {
+    const { phone } = JSON.parse(box.dataset.person || "{}");
+    window.open(waLink(phone, v("body")), "_blank");
+    toast("WhatsApp opened", "Check the message, send it yourself, then hit Mark sent.");
+  }
   if (b.dataset.do === "open" || b.dataset.do === "copy") {
     await navigator.clipboard.writeText(v("body"));
     if (b.dataset.do === "copy") toast("Copied");
@@ -636,6 +694,53 @@ $("sh-people").addEventListener("click", async (e) => {
     loadNetwork();
   }
 });
+
+// ---- jobs tab ----
+let jobs = [];
+async function loadJobs() {
+  try {
+    const [r, a] = await Promise.all([api("/api/jobs"), api("/api/auto")]);
+    jobs = r.jobs.slice().sort((x, y) => String(y.posted).localeCompare(String(x.posted)));
+    $("c-jobs").textContent = jobs.length;
+    $("j-meta").textContent = (r.scannedAt ? `Scanned ${new Date(r.scannedAt).toLocaleString()}` : "Not scanned yet") + ` · auto found ${a.doneToday}/${a.perDay} today${a.running ? " (running)" : ""}`;
+    $("j-auto").checked = a.enabled;
+    $("j-perday").value = a.perDay;
+    $("jobs").innerHTML = jobs.map((j, i) => `
+      <tr>
+        <td><b>${esc(j.company)}</b></td>
+        <td><a href="${esc(j.url)}" target="_blank">${esc(j.title)}</a></td>
+        <td class="hide-sm muted xs">${esc(j.location)}</td>
+        <td class="muted xs">${esc(j.posted)}</td>
+        <td>${j.people === null ? `<button class="btn sm brand" data-j="${i}">${ic("users")}Find HR</button>` : `<button class="btn sm" data-j="${i}">${ic("users")}${j.people} found</button>`}</td>
+      </tr>`).join("") || `<tr><td colspan="5"><div class="empty">${ic("refresh")}No jobs yet. Hit Scan now.</div></td></tr>`;
+  } catch (e) { $("jobs").innerHTML = `<tr><td colspan="5" class="muted xs">Couldn't load jobs: ${esc(e.message)}</td></tr>`; }
+}
+$("jobs").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-j]"); if (!b) return;
+  const j = jobs[+b.dataset.j];
+  const pack = { company: j.company, role: j.title, link: j.url, apply: j.apply };
+  $("sh-title").textContent = j.company;
+  $("sh-role").textContent = `${j.title} · ${j.location}`;
+  $("sh-body").textContent = "No prepared notes for scanned jobs.";
+  $("sh-foot").innerHTML = `<a class="btn" href="${esc(j.url)}" target="_blank">${ic("ext")}Job post</a>` +
+    (ext ? `<button class="btn brand" id="j-fill">${ic("spark")}Claude fill</button>` : "");
+  document.body.classList.add("open");
+  const fill = $("j-fill"); if (fill) fill.onclick = () => openAndFill(j.apply, true, j.company);
+  loadPeople(pack, false).then(loadJobs);
+});
+$("j-scan").onclick = async () => {
+  $("j-scan").disabled = true;
+  toast("Scanning job boards", "Ashby, Greenhouse and Lever, about 30 seconds…", 60000);
+  try { const r = await api("/api/jobs/scan", {}); toast(`${r.count} jobs fit your filters`); }
+  catch (e) { toast("Scan failed", e.message); }
+  $("j-scan").disabled = false;
+  loadJobs();
+};
+const saveAuto = async () => { await api("/api/auto", { enabled: $("j-auto").checked, perDay: +$("j-perday").value || 10 }); loadJobs(); };
+$("j-auto").onchange = saveAuto;
+$("j-perday").onchange = saveAuto;
+loadJobs();
+setInterval(() => { if (!$("j-auto").closest("[hidden]")) loadJobs(); }, 60000);
 
 // ---- network tab ----
 async function loadNetwork() {

@@ -23,6 +23,7 @@ leena plivo hevodata whatfix mindtickle chargebee paytm swiggy zepto atlan sigmo
 dream11 games24x7 mpl sharechat dailyhunt inshorts pocketfm kukufm stagehq toplyne trell""".split()
 
 LOC_OK = re.compile(r"india|bengaluru|bangalore|delhi|gurgaon|gurugram|noida|hyderabad|pune|mumbai|chennai|remote|anywhere|global|apac|asia", re.I)
+LOC_OPEN = re.compile(r"\b(remote|anywhere|global|globally|worldwide|apac|asia|hybrid|distributed|flexible|work from home|wfh|first|only|friendly)\b", re.I)
 LOC_BAD = re.compile(r"\b(us|usa|united states|americas|north america|emea|europe|uk|united kingdom|canada|latam|germany|france|london|new york|san francisco|seattle|austin|toronto|berlin|amsterdam|dublin|singapore|tokyo|sydney|ljubljana)\b", re.I)
 TITLE_OK = re.compile(r"engineer|developer|\bsde\b|programmer", re.I)
 TITLE_FIT = re.compile(r"full[ -]?stack|back[ -]?end|front[ -]?end|software|\bai\b|agent|platform|product engineer|forward deployed|founding|node|typescript|web|applied|integrations?|solutions? engineer|\bsde\b|member of technical staff", re.I)
@@ -30,7 +31,7 @@ TITLE_BAD = re.compile(r"senior|sr\.?\b|staff|principal|lead\b|manager|director|
 
 def get(url):
     try:
-        with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"}), timeout=20) as r:
+        with urllib.request.urlopen(urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/130 Safari/537.36"}), timeout=20) as r:
             return json.load(r)
     except Exception:
         return None
@@ -61,19 +62,27 @@ def fits(j):
         return False
     if re.search(r"india|bengaluru|bangalore|delhi|gurgaon|gurugram|noida|hyderabad|pune|mumbai|chennai", loc, re.I):
         return True
-    return bool(LOC_OK.search(loc) and not LOC_BAD.search(loc))
+    # Not in India: keep only locations made of "open" words (Remote, Global, APAC...), so
+    # "Remote - Ireland" or "Remote / Australia" are dropped.
+    rest = LOC_OPEN.sub(" ", loc)
+    return bool(LOC_OK.search(loc) and not LOC_BAD.search(loc) and not re.search(r"[a-z]", rest, re.I))
 
-jobs = []
-with ThreadPoolExecutor(24) as ex:
-    for res in ex.map(ashby, ASHBY): jobs += res
-    for res in ex.map(greenhouse, GREENHOUSE): jobs += res
-    for res in ex.map(lever, LEVER): jobs += res
-seen, out = set(), []
-for j in jobs:
-    if fits(j) and j["url"] not in seen:
-        seen.add(j["url"]); out.append(j)
-out.sort(key=lambda j: (not re.search(r"delhi|gurgaon|gurugram|noida", j["location"], re.I), j["posted"] or "0"), reverse=False)
-json.dump(out, open(sys.argv[1], "w", encoding="utf-8"), indent=1, ensure_ascii=False)
-print(f"{len(jobs)} jobs scanned, {len(out)} fit")
-for j in out:
-    print(f"{j['ats'][:2]} | {j['company'][:14]:14} | {j['title'][:55]:55} | {j['location'][:40]:40} | {j['posted']}")
+def main():
+    jobs = []
+    with ThreadPoolExecutor(24) as ex:
+        for res in ex.map(ashby, ASHBY): jobs += res
+        for res in ex.map(greenhouse, GREENHOUSE): jobs += res
+        for res in ex.map(lever, LEVER): jobs += res
+    seen, out = set(), []
+    for j in jobs:
+        if fits(j) and j["url"] not in seen:
+            seen.add(j["url"]); out.append(j)
+    out.sort(key=lambda j: (not re.search(r"delhi|gurgaon|gurugram|noida", j["location"], re.I), j["posted"] or "0"), reverse=False)
+    json.dump(out, open(sys.argv[1], "w", encoding="utf-8"), indent=1, ensure_ascii=False)
+    print(f"{len(jobs)} jobs scanned, {len(out)} fit")
+    for j in out:
+        print(f"{j['ats'][:2]} | {j['company'][:14]:14} | {j['title'][:55]:55} | {j['location'][:40]:40} | {j['posted']}")
+
+
+if __name__ == "__main__":
+    main()

@@ -363,14 +363,31 @@
   function pageInfo() {
     const u = new URL(location.href);
     const seg = u.pathname.split("/").filter(Boolean);
-    let company = "";
-    if (/ashbyhq|lever\.co|greenhouse\.io|workable\.com|smartrecruiters|breezy|recruitee|wellfound/.test(u.hostname)) company = seg[0] || "";
-    else if (/myworkdayjobs/.test(u.hostname)) company = u.hostname.split(".")[0];
-    company = company || document.querySelector('meta[property="og:site_name"]')?.content || u.hostname.replace(/^(www|jobs|careers|apply)\./, "").split(".")[0];
-    company = company.replace(/[-_]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    const pick = (...sels) => sels.map((s) => textOf(document.querySelector(s))).find((t) => t && t.length < 80) || "";
+    // Job portals show the hiring company on the page, not in the URL.
+    let company = /linkedin\.com/.test(u.hostname) ? pick(".job-details-jobs-unified-top-card__company-name a", ".job-details-jobs-unified-top-card__company-name", 'a[href*="/company/"]')
+      : /naukri\.com/.test(u.hostname) ? pick(".jd-header-comp-name a", '[class*="comp-name"] a', '[class*="comp-name"]')
+      : /instahyre\.com/.test(u.hostname) ? pick(".company-name", '[class*="company-name"]')
+      : /wellfound\.com/.test(u.hostname) ? pick('a[href^="/company/"]') : "";
+    if (!company) {
+      if (/ashbyhq|lever\.co|greenhouse\.io|workable\.com|smartrecruiters|breezy|recruitee/.test(u.hostname)) company = seg[0] === "embed" ? u.searchParams.get("for") || "" : seg[0] || "";
+      else if (/myworkdayjobs/.test(u.hostname)) company = u.hostname.split(".")[0];
+      company = company || document.querySelector('meta[property="og:site_name"]')?.content || u.hostname.replace(/^(www|jobs|careers|apply)\./, "").split(".")[0];
+      company = company.replace(/[-_]+/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+    }
     const h1 = textOf(document.querySelector("h1")) || textOf(document.querySelector("h2"));
     const role = (h1 && h1.length < 120 ? h1 : document.title.split(/ [-|@–] /)[0]).trim();
-    return { company, role, url: location.href, text: (document.body?.innerText || "").slice(0, 30000) };
+    return { company, role, url: location.href, text: (document.body?.innerText || "").slice(0, 30000), domain: siteDomain() };
+  }
+
+  // The company's own website: a "Website" link on a job board, or the page itself when it's a company careers site.
+  const BOARD = /linkedin|naukri|instahyre|wellfound|ashbyhq|lever\.co|greenhouse|workable|smartrecruiters|breezy|recruitee|myworkdayjobs/;
+  function siteDomain() {
+    for (const a of document.querySelectorAll("a[href^='http']")) {
+      if (!/^(website|company (web)?site|visit website|homepage)$/i.test((a.textContent || "").trim())) continue;
+      try { const h = new URL(a.href).hostname.replace(/^www\./, ""); if (!BOARD.test(h)) return h; } catch {}
+    }
+    return BOARD.test(location.hostname) ? "" : location.hostname.replace(/^(www|jobs|careers|apply)\./, "");
   }
 
   globalThis.__applyKit = { fill, score, pageInfo, collectOpen, applyAnswers };

@@ -44,7 +44,7 @@ export async function readPage(tabId) {
   const top = res.find((r) => r.frameId === 0)?.result || res[0]?.result || {};
   const jd = res.map((r) => r.result?.text || "").join("\n").slice(0, 30000);
   const [{ result: score }] = await chrome.scripting.executeScript({ target: { tabId }, func: (t) => globalThis.__applyKit.score(t), args: [jd] });
-  return { company: top.company, role: top.role, url: top.url, jd, score };
+  return { company: top.company, role: top.role, url: top.url, domain: top.domain || "", jd, score };
 }
 
 // Fill from profile, then send the questions still empty to Claude and fill its answers.

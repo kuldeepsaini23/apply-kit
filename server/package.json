@@ -4,7 +4,8 @@
   "type": "module",
   "scripts": {
     "start": "bun server.ts",
-    "eval:rag": "bun rag-eval.ts"
+    "eval:rag": "bun rag-eval.ts",
+    "test": "bun test"
   },
   "dependencies": {
     "@huggingface/transformers": "3"

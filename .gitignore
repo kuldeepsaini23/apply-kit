@@ -10,3 +10,4 @@ node_modules/
 NOTES-private.md
 server/rag-eval.cases.json
 server/node_modules/
+__pycache__/

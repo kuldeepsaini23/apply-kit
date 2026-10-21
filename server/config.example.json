@@ -5,5 +5,16 @@
  "deadline": "2026-01-31",
  "docs": [
   "./docs"
- ]
+ ],
+ "hunter_api_key": "",
+ "github_token": "",
+ "limits": {
+  "hunter": {
+   "month": 50
+  }
+ },
+ "auto": {
+  "enabled": false,
+  "perDay": 10
+ }
 }

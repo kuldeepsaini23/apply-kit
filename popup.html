@@ -22,6 +22,12 @@
   .legend { display: flex; gap: 10px; margin-top: 10px; font-size: 11.5px; color: var(--muted-foreground); }
   .legend i { display: inline-block; width: 8px; height: 8px; border-radius: 2px; margin-right: 4px; vertical-align: middle; }
   textarea.input { min-height: 120px; font-size: 12px; margin-top: 8px; }
+  .hrp { padding: 8px 0; border-top: 1px solid var(--border); }
+  .hrp:first-child { border-top: 0; padding-top: 0; }
+  .hrp .t { color: var(--muted-foreground); }
+  .hrc { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+  .hrc a { display: inline-flex; align-items: center; gap: 4px; height: 22px; padding: 0 7px; border: 1px solid var(--border); border-radius: 7px; background: var(--muted); color: var(--foreground); text-decoration: none; }
+  .hrc a i { font-style: normal; font-size: 10.5px; color: var(--muted-foreground); }
 </style>
 </head>
 <body>
@@ -65,6 +71,12 @@
     </div>
     <div id="aiscore"></div>
     <textarea class="input" id="dmout" hidden></textarea>
+  </div>
+
+  <div class="card">
+    <div class="sec">People who hire here</div>
+    <button class="btn brand sm block" id="findhr"><svg class="i"><use href="#i-target"/></svg>Find HR</button>
+    <div id="hr" class="xs" style="margin-top:8px"></div>
   </div>
 
   <div class="card">

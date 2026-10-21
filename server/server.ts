@@ -1,9 +1,11 @@
 // Apply Kit local server: the extension and the dashboard call this; it calls Claude Code (`claude -p`)
 // on your subscription. Binds to 127.0.0.1 only and rejects requests from other websites.
 // Run: bun E:\Work\job-hunt\extension\server\server.ts   (or start.cmd)
-import { readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync } from "node:fs";
+import { readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { Index, asContext } from "./rag";
+import { findContacts, slug, type FindInput, type Research } from "./contacts";
+import { Ledger } from "./contacts/ledger";
 
 const PORT = 4777;
 const DIR = import.meta.dir;
@@ -66,7 +68,7 @@ function loadPacks(): Pack[] {
 function packFor(url = "", company = ""): Pack | undefined {
   const packs = loadPacks();
   const u = url.split("?")[0];
-  return packs.find((p) => p.link && (u.startsWith(p.link) || p.link.startsWith(u.replace(/\/application$/, ""))))
+  return packs.find((p) => u && p.link && (u.startsWith(p.link) || p.link.startsWith(u.replace(/\/application$/, ""))))
     || packs.find((p) => company && p.company.toLowerCase().split(/\s+/)[0] === company.toLowerCase().split(/\s+/)[0]);
 }
 
@@ -120,7 +122,6 @@ const PEOPLE = join(DATA, "people");
 const CONNS = join(DATA, "connections.json");
 const OUTREACH = join(DATA, "outreach.json");
 if (!existsSync(PEOPLE)) mkdirSync(PEOPLE);
-const slug = (s = "") => s.toLowerCase().replace(/\(.*?\)/g, "").replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 const readJson = (f: string, d: any) => (existsSync(f) ? JSON.parse(readFileSync(f, "utf8")) : d);
 
 // Company name → comparable key: "Composio, Inc." / "composio.dev" / "Composio (YC W24)" → "composio"
@@ -159,6 +160,66 @@ function parseConnectionsCsv(csv: string) {
   })).filter((c) => c.name);
 }
 
+// ---------- Finding people ----------
+const config = (): any => (existsSync(CONFIG_FILE) ? JSON.parse(readFileSync(CONFIG_FILE, "utf8")) : {});
+const ledger = new Ledger(join(DATA, "credits.json"), config().limits ?? { hunter: { month: 50 } });
+
+async function research(b: FindInput): Promise<Research> {
+  const pack = packFor(b.url, b.company);
+  const prompt = `Research who I should contact about this job. Use web search; check the company site (team/about/careers pages), LinkedIn search results and public LinkedIn/X hiring posts, Crunchbase-style pages, YC company page, GitHub org, blog posts and job posts.
+Company: ${b.company}
+Role: ${b.role || "?"}
+Job URL: ${b.url || "?"}
+${pack ? "My notes on this company:\n" + pack.body.slice(0, 2500) : ""}
+${b.jd ? "Job text:\n" + String(b.jd).slice(0, 4000) : ""}
+
+Find up to 6 real people, best first: recruiters or talent partners hiring for this team, the hiring manager or engineering lead, founders/CTO (for startups under ~100 people). Also find the company's website domain and its email pattern.
+Recruiters often publish a phone/WhatsApp number or an email in public hiring posts ("share your CV at ..."). Include those in phone/email ONLY if a page you opened shows them for that person, and put that page's URL in source.
+RULES: only include a person if a source you actually opened names them at this company now. Never guess LinkedIn or X URLs, phones or emails; leave them "" if you didn't see them. Don't include anyone who has left.
+Return ONLY JSON: {"domain":"","email_pattern":"first.last|firstlast|flast|f.last|first_last|last.first|firstl|first|last or empty","people":[{"name":"","title":"","type":"founder|hiring_manager|engineer|recruiter","linkedin":"","x":"","email":"","phone":"","why":"one line: why contact them","source":"url"}],"notes":"one line: best way in (e.g. founder reads DMs on X, careers@ inbox, etc.)"}`;
+  return json(await claude(prompt, { web: true }));
+}
+
+function findPeople(b: any) {
+  const c = config();
+  return findContacts(
+    { company: b.company, role: b.role, url: b.url, jd: b.jd, domain: b.domain, refresh: !!b.refresh },
+    { fetch: (u, init) => fetch(u, init), research, legacy: (co) => readJson(join(PEOPLE, slug(co) + ".json"), null), ledger, cacheDir: PEOPLE, hunterKey: c.hunter_api_key || undefined, githubToken: c.github_token || undefined, today },
+  );
+}
+
+// ---------- Jobs feed + auto mode ----------
+// tools/scan-boards.py writes data/jobs.json; auto mode finds people for the newest jobs, a few a day.
+const JOBS = join(DATA, "jobs.json");
+const AUTO = join(DATA, "auto.json");
+const peopleCached = (company: string) => existsSync(join(PEOPLE, slug(company) + ".v2.json"));
+
+function readAuto() {
+  const a = { enabled: false, perDay: 10, ...(config().auto ?? {}), doneToday: 0, day: today(), ...readJson(AUTO, {}) };
+  if (a.day !== today()) { a.day = today(); a.doneToday = 0; }
+  return a;
+}
+
+let autoRunning = false;
+async function autoStep() {
+  const a = readAuto();
+  if (!a.enabled || autoRunning || a.doneToday >= a.perDay) return;
+  const next = (readJson(JOBS, []) as any[]).filter((j) => !peopleCached(j.company)).sort((x, y) => String(y.posted).localeCompare(String(x.posted)))[0];
+  if (!next) return;
+  autoRunning = true;
+  try {
+    await findPeople({ company: next.company, role: next.title, url: next.url });
+    console.log(`auto: people found for ${next.company}`);
+  } catch (e: any) {
+    console.error(`auto: ${next.company}: ${e.message}`);
+  } finally {
+    autoRunning = false;
+    writeFileSync(AUTO, JSON.stringify({ ...readAuto(), doneToday: readAuto().doneToday + 1 }, null, 1));
+  }
+}
+setInterval(autoStep, 10 * 60 * 1000);
+setTimeout(autoStep, 30 * 1000);
+
 // ---------- HTTP ----------
 function allowed(req: Request) {
   const o = req.headers.get("origin");
@@ -174,7 +235,8 @@ const send = (req: Request, body: any, status = 200) =>
 
 const routes: Record<string, (b: any) => Promise<any> | any> = {
   "GET /api/health": () => ({ ok: true, model: MODEL }),
-  "GET /api/config": () => (existsSync(CONFIG_FILE) ? JSON.parse(readFileSync(CONFIG_FILE, "utf8")) : {}),
+  // Keys and tokens never leave the server.
+  "GET /api/config": () => Object.fromEntries(Object.entries(config()).filter(([k]) => !/_(key|token)$/.test(k))),
   // Debug/inspect retrieval: {q, k?, mode?: "bm25" | "vector" | "hybrid"}
   "POST /api/rag/search": async (b) => {
     await ragReady;
@@ -209,26 +271,29 @@ const routes: Record<string, (b: any) => Promise<any> | any> = {
     return a;
   },
 
-  // Who to contact at a company: public web research by Claude, cached per company.
-  "POST /api/people": async (b) => {
-    const file = join(PEOPLE, slug(b.company) + ".json");
-    let res = !b.refresh && existsSync(file) ? JSON.parse(readFileSync(file, "utf8")) : null;
-    if (!res) {
-      const pack = packFor(b.url, b.company);
-      const prompt = `Research who I should contact about this job. Use web search; check the company site (team/about/careers pages), LinkedIn search results, X, Crunchbase-style pages, YC company page, GitHub org, blog posts and job posts.
-Company: ${b.company}
-Role: ${b.role || "?"}
-Job URL: ${b.url || "?"}
-${pack ? "My notes on this company:\n" + pack.body.slice(0, 2500) : ""}
-${b.jd ? "Job text:\n" + String(b.jd).slice(0, 4000) : ""}
+  // Who to contact at a company and how: Claude research + company site + GitHub + optional verifier, cached per company.
+  "POST /api/people": async (b) => ({ ...(await findPeople(b)), connections: connectionsAt(b.company) }),
 
-Find up to 6 real people, best first: the hiring manager or engineering lead for this role, founders/CTO (for startups under ~100 people), and recruiters or talent partners. Also find the company email domain and its email pattern.
-RULES: only include a person if a source you actually opened names them at this company now. Never guess LinkedIn or X URLs; leave them "" if you didn't see them. email_guess = pattern applied to their name, or "" if the pattern is unknown. Don't include anyone who has left.
-Return ONLY JSON: {"domain":"","email_pattern":"","pattern_confidence":"high|medium|low","people":[{"name":"","title":"","type":"founder|hiring_manager|engineer|recruiter","linkedin":"","x":"","email_guess":"","why":"one line: why contact them","source":"url"}],"notes":"one line: best way in (e.g. founder reads DMs on X, careers@ inbox, etc.)"}`;
-      res = { ...json(await claude(prompt, { web: true })), fetchedAt: today() };
-      writeFileSync(file, JSON.stringify(res, null, 2));
-    }
-    return { ...res, connections: connectionsAt(b.company) };
+  "GET /api/jobs": () => ({
+    jobs: (readJson(JOBS, []) as any[]).map((j) => ({ ...j, people: peopleCached(j.company) ? readJson(join(PEOPLE, slug(j.company) + ".v2.json"), {}).people?.length ?? 0 : null })),
+    scannedAt: existsSync(JOBS) ? statSync(JOBS).mtime.toISOString() : null,
+  }),
+  "POST /api/jobs/scan": async () => {
+    const proc = Bun.spawn(["python", "tools/scan-boards.py", JOBS], { cwd: join(DIR, ".."), stdout: "pipe", stderr: "pipe" });
+    const timer = setTimeout(() => proc.kill(), 5 * 60 * 1000);
+    const [out, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
+    clearTimeout(timer);
+    if ((await proc.exited) !== 0) throw new Error("scan failed: " + (err || out).slice(-300));
+    return { count: (readJson(JOBS, []) as any[]).length };
+  },
+  "GET /api/auto": () => ({ ...readAuto(), running: autoRunning }),
+  "POST /api/auto": (b) => {
+    const a = readAuto();
+    if (typeof b.enabled === "boolean") a.enabled = b.enabled;
+    if (Number(b.perDay) > 0) a.perDay = Math.min(50, Math.floor(Number(b.perDay)));
+    writeFileSync(AUTO, JSON.stringify(a, null, 1));
+    if (a.enabled) setTimeout(autoStep, 1000);
+    return { ...a, running: autoRunning };
   },
 
   "GET /api/connections": () => {
@@ -259,7 +324,7 @@ Return ONLY JSON: {"domain":"","email_pattern":"","pattern_confidence":"high|med
 Name: ${p.name}. Title: ${p.title || p.position || "?"}. Relation: ${isRef ? `my LinkedIn connection${p.connectedOn ? ` since ${p.connectedOn}` : ""}` : p.relation || "cold"}.
 ${p.why ? "Why them: " + p.why : ""}
 
-Write ONE ${channel === "email" ? "email (subject + body, under 130 words)" : channel === "linkedin" ? "LinkedIn message (under 90 words; if we're not connected it must fit a 300-character connection note, so give that version)" : "X DM (under 60 words, casual, lowercase)"}.
+Write ONE ${channel === "email" ? "email (subject + body, under 130 words)" : channel === "whatsapp" ? "WhatsApp message (under 60 words, polite, says who I am, the exact role, and asks if I can share my resume; at most one link)" : channel === "linkedin" ? "LinkedIn message (under 90 words; if we're not connected it must fit a 300-character connection note, so give that version)" : "X DM (under 60 words, casual, lowercase)"}.
 ${isRef
   ? "Goal: ask for a referral for this role. Be warm and low-pressure, make it easy to say no, offer to send a short blurb + resume they can forward, mention the exact role and link."
   : "Goal: get a reply about this role. Mention one specific thing about their product or work, one proof point of mine that fits this role, and one simple ask (quick chat, or who's the right person)."}

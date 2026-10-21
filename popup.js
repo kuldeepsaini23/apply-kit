@@ -42,6 +42,26 @@ function renderScore(s) {
   $("scorenote").textContent = s.total >= 75 ? "Strong fit. Apply and DM someone." : s.total >= 60 ? "Decent. Apply if the posting is fresh." : "Long shot. Only if you really want it.";
 }
 
+const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+// One contact as a link: phone → call + WhatsApp, email → Gmail compose, profiles → open. Never sends.
+function hrLink(c) {
+  const st = c.status ? ` <i>${esc(c.status)}</i>` : "";
+  const a = (href, label) => `<a href="${esc(href)}" target="_blank" title="Source: ${esc(c.source)}">${label}${st}</a>`;
+  if (c.kind === "phone") return a(`tel:${c.value}`, esc(c.value)) + a(`https://wa.me/${c.value.replace(/\D/g, "")}`, "WhatsApp");
+  if (c.kind === "email" || c.kind === "inbox") return a(`https://mail.google.com/mail/?authuser=${encodeURIComponent(P.email || "")}&view=cm&fs=1&to=${encodeURIComponent(c.value)}`, esc(c.value));
+  return a(c.value, c.kind === "linkedin" ? "LinkedIn" : "X");
+}
+
+function renderHr(r) {
+  const people = (r.people || []).slice(0, 5).map((p) => `
+    <div class="hrp"><b>${esc(p.name)}</b> <span class="t">· ${esc(p.title || p.type)}</span>
+      <div class="hrc">${(p.contacts || []).map(hrLink).join("") || '<span class="t">no contact found</span>'}</div></div>`).join("");
+  const inbox = (r.inboxes || []).length ? `<div class="hrp"><b>Company</b><div class="hrc">${r.inboxes.map(hrLink).join("")}</div></div>` : "";
+  return (people || '<div class="t">No named people found.</div>') + inbox +
+    `<div style="margin-top:6px"><a href="http://localhost:4777" target="_blank">Open all in dashboard</a> · <a href="${esc(r.apolloSearch || "#")}" target="_blank">Find on Apollo</a></div>`;
+}
+
 async function init() {
   [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
   const { currency = "INR" } = await chrome.storage.local.get("currency");
@@ -81,7 +101,7 @@ async function init() {
   $("srvtext").textContent = up ? "Claude" : "Claude off";
   $("srvbadge").title = up ? "Claude server running" : "Claude server off";
   $("srvhelp").hidden = up;
-  for (const id of ["aifill", "aiscorebtn", "dmbtn"]) $(id).disabled = !up;
+  for (const id of ["aifill", "aiscorebtn", "dmbtn", "findhr"]) $(id).disabled = !up;
 
   const bullets = (arr) => arr.map((x) => "• " + x).join("\n");
 
@@ -128,6 +148,18 @@ async function init() {
     } catch (e) {
       $("aiscore").textContent = "Failed: " + e.message;
     }
+  };
+
+  $("findhr").onclick = async () => {
+    $("hr").textContent = "Finding people (instant if cached, about a minute otherwise)…";
+    $("findhr").disabled = true;
+    try {
+      const r = await api("/api/people", { ...job(), domain: info.domain || "" });
+      $("hr").innerHTML = renderHr(r);
+    } catch (e) {
+      $("hr").textContent = "Failed: " + e.message;
+    }
+    $("findhr").disabled = false;
   };
 
   $("log").onclick = async () => {
