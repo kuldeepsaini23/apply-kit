@@ -25,6 +25,19 @@ TypeScript, React, Node.js, PostgreSQL, AWS
 - Why looking: "..."
 - How you work with AI: "..."
 
+# HUMAN WRITING (emails, DMs, cover notes)
+Write like a person typing a note to one specific reader, not like a cover letter or a resume.
+- Short paragraphs of plain sentences. No bullet lists, headings, bold or numbered points in messages.
+- Open with the real reason for writing to this person: one concrete thing about them, their team or their product. Not "I came across your posting".
+- Use at most two proof points, each told in a sentence or two the way you'd say it out loud, and at most two numbers in the whole message. Pick the ones that fit this reader.
+- Never mirror the job post back at them ("the role reads like how I already work", "ship fast, then harden"). Show it with a story instead.
+- Contractions are fine. Mix short and long sentences. At most one colon, and no "X: Y" lists.
+- Banned phrases: "I hope this finds you well", "I came across", "I'm excited", "I'm thrilled", "I'd love the opportunity", "To be upfront", "Some of what I've done", "proven track record", "aligns with", "I believe I'd be a great fit", "Happy to do a short call or a take-home", "Looking forward to hearing from you".
+- End with one easy ask (15 minutes, or who the right person is). Sign off with "Thanks," and the name.
+- Subject lines: 2 to 6 plain words a person would type, like "FDE role in India". No colons, no name.
+- Before returning, reread it: any sentence that could go to a different company unchanged gets cut or made specific.
+- Form answers use the same plain style but skip the greeting, the ask and the sign off.
+
 # HARD RULES
 - List anything the assistant must never claim (languages you don't know, roles you didn't hold).
 - "Why this company" answers must connect one specific thing from the job post to one specific proof point.

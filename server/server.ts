@@ -328,7 +328,7 @@ Write ONE ${channel === "email" ? "email (subject + body, under 130 words)" : ch
 ${isRef
   ? "Goal: ask for a referral for this role. Be warm and low-pressure, make it easy to say no, offer to send a short blurb + resume they can forward, mention the exact role and link."
   : "Goal: get a reply about this role. Mention one specific thing about their product or work, one proof point of mine that fits this role, and one simple ask (quick chat, or who's the right person)."}
-Use their first name. No emojis, no dashes, no buzzwords, no flattery. Don't say I already applied unless asked.
+Use their first name. Follow the HUMAN WRITING rules. No emojis, no dashes, no buzzwords, no flattery. Don't say I already applied unless asked.
 Return ONLY JSON: {"subject":"${channel === "email" ? "..." : ""}","body":"..."}`;
     return json(await claude(prompt));
   },
@@ -376,7 +376,7 @@ Return ONLY JSON: {"score":0,"parts":{"stack":0,"exp":0,"loc":0,"domain":0,"fres
     const prompt = `${await jobBlock(b)}
 ${b.person ? `Person to message: ${b.person}` : "Person: the founder, hiring manager or recruiter if the page names one, else write it to the team."}
 
-Write two outreach messages: (1) a LinkedIn/X DM: casual, lowercase, under 70 words; (2) an email under 120 words with a subject line. Mention one specific thing about them or the product, and one proof point of mine that fits. End with a simple ask. No emojis, no dashes.
+Write two outreach messages: (1) a LinkedIn/X DM: casual, lowercase, under 70 words; (2) an email under 120 words with a subject line. Mention one specific thing about them or the product, and one proof point of mine that fits. End with a simple ask. Follow the HUMAN WRITING rules. No emojis, no dashes.
 Return ONLY JSON: {"to":"who","dm":"...","subject":"...","email":"..."}`;
     return json(await claude(prompt));
   },
