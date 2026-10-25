@@ -45,9 +45,11 @@ if (EXE) {
 }
 
 // ---------- Claude ----------
-// web: let Claude use WebSearch/WebFetch (people research). Otherwise no tools at all.
-async function claude(prompt: string, { web = false } = {}): Promise<string> {
-  const tools = web ? ["--tools", "WebSearch,WebFetch", "--allowedTools", "WebSearch", "WebFetch"] : ["--tools", ""];
+// web: let Claude use WebSearch/WebFetch (people research). read: let it read files in that folder (the resume).
+// Otherwise no tools at all.
+async function claude(prompt: string, { web = false, read = "" } = {}): Promise<string> {
+  const tools = web ? ["--tools", "WebSearch,WebFetch", "--allowedTools", "WebSearch", "WebFetch"]
+    : read ? ["--tools", "Read", "--allowedTools", "Read", "--add-dir", read] : ["--tools", ""];
   const proc = Bun.spawn(
     ["claude", "-p", "--model", MODEL, ...tools, "--no-session-persistence", "--setting-sources", "", "--strict-mcp-config",
      "--system-prompt-file", contextFile(), "--output-format", "json"],
@@ -147,6 +149,12 @@ const OUTREACH = join(DATA, "outreach.json");
 const PROFILE = join(DATA, "profile.json");
 const RESUME = join(DATA, "resume.pdf");
 if (!existsSync(PEOPLE)) mkdirSync(PEOPLE);
+// The older setup kept the profile in ../profile.js (globalThis.APPLY_PROFILE = {...}): offer it to prefill the form.
+function legacyProfile(): any {
+  const file = join(DIR, "..", "profile.js");
+  if (!existsSync(file)) return null;
+  try { const g: any = {}; new Function("globalThis", readFileSync(file, "utf8"))(g); return g.APPLY_PROFILE ?? null; } catch { return null; }
+}
 const readJson = (f: string, d: any) => (existsSync(f) ? JSON.parse(readFileSync(f, "utf8")) : d);
 
 // Company name → comparable key: "Composio, Inc." / "composio.dev" / "Composio (YC W24)" → "composio"
@@ -286,12 +294,24 @@ const routes: Record<string, (b: any) => Promise<any> | any> = {
   },
   // A tiny prompt to prove `claude -p` is logged in.
   "POST /api/setup/test-claude": async () => ({ reply: (await claude('Reply with exactly: {"ok":true}')).slice(0, 80) }),
-  "GET /api/profile": () => readJson(PROFILE, null) ?? { missing: true },
+  "GET /api/profile": () => readJson(PROFILE, null) ?? { missing: true, suggested: legacyProfile() },
   "POST /api/profile": (b) => {
     if (!b || typeof b !== "object" || Array.isArray(b)) throw new Error("profile must be an object");
     const clean = Object.fromEntries(Object.entries(b).filter(([k, v]) => /^[a-zA-Z]{1,40}$/.test(k) && (typeof v !== "object" || k === "answers")));
     writeFileSync(PROFILE, JSON.stringify(clean, null, 1));
     return { ok: true };
+  },
+  // Claude reads the resume PDF and returns profile fields; the Setup page fills the empty boxes and you review them.
+  "POST /api/profile/from-resume": async () => {
+    const pdf = [RESUME, join(DIR, "..", "resume.pdf")].find(existsSync);
+    if (!pdf) throw new Error("Upload your resume first.");
+    const reply = await claude(`Read the resume PDF at ${JSON.stringify(pdf)} and fill in this job-application profile from it.
+Use only what the resume says. Leave a field out if the resume doesn't state it; never guess pay, notice period or work authorization.
+Return ONLY JSON with any of these keys:
+{"fullName","email","phone","location","city","state","country","linkedin","github","website","x","company","title","years" (number, total years of work),"school","degree","field","gradYear" (number)}
+Links must be full https URLs. location is "City, Country". company and title are the current or most recent job.`, { read: dirname(pdf) });
+    const out = json<Record<string, unknown>>(reply);
+    return { fields: Object.fromEntries(Object.entries(out).filter(([k, v]) => /^[a-zA-Z]{1,40}$/.test(k) && (typeof v === "string" || typeof v === "number"))) };
   },
   "GET /api/facts": () => ({ text: existsSync(FACTS) ? readFileSync(FACTS, "utf8") : "", privateContext: existsSync(join(DIR, "context.md")) }),
   "POST /api/facts": (b) => {

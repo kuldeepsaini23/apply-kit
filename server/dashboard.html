@@ -47,9 +47,47 @@
   .sdot { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--muted); color: var(--muted-foreground); font-weight: 700; font-size: 13px; }
   .sdot.ok { background: var(--success-soft); color: var(--success-ink); }
   .sdot.bad { background: var(--warn-soft); color: var(--warn-ink); }
-  .sgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px 14px; }
-  .sgroup { grid-column: 1 / -1; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted-foreground); margin-top: 6px; }
-  .sfield { display: grid; gap: 4px; font-size: 12.5px; color: var(--muted-foreground); }
+  .phead { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; padding: 16px 20px; }
+  .phead h3 { margin: 0 0 6px; }
+  .pmeter { display: flex; align-items: center; gap: 8px; font-size: 12.5px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+  .pmeter i { display: block; width: 96px; height: 6px; border-radius: 99px; background: var(--muted); overflow: hidden; }
+  .pmeter i b { display: block; height: 100%; background: var(--primary); border-radius: inherit; transition: width .25s ease; }
+  .pnote { margin: 0 20px 16px; background: var(--accent); color: var(--foreground); }
+  .psec { display: grid; grid-template-columns: 200px minmax(0, 1fr); gap: 24px; padding: 20px; border-top: 1px solid var(--border); }
+  .psec h4 { margin: 0 0 4px; font-size: 14px; font-weight: 600; color: var(--foreground); }
+  .psec p { margin: 0; font-size: 12.5px; line-height: 1.45; color: var(--muted-foreground); }
+  .psec .cnt { display: inline-block; margin-top: 8px; font-size: 12px; color: var(--muted-foreground); font-variant-numeric: tabular-nums; }
+  .psec .cnt.full { color: var(--success-ink); }
+  .sgrid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 12px 14px; }
+  .sfield { display: grid; gap: 5px; align-content: start; font-size: 12.5px; font-weight: 500; color: var(--foreground); grid-column: span 2; }
+  .sfield.w3 { grid-column: span 3; }
+  .sfield.w4 { grid-column: span 4; }
+  .sfield.w6 { grid-column: 1 / -1; }
+  #pform:not(.all) .more { display: none; }
+  #pform.reading .input:placeholder-shown { color: transparent; background: linear-gradient(90deg, var(--muted) 0%, var(--ai-soft) 50%, var(--muted) 100%) 0 0 / 300% 100%; animation: shimmer 1.4s ease-in-out infinite; }
+  #pform.reading .input:placeholder-shown::placeholder { color: transparent; }
+  @keyframes shimmer { from { background-position: 100% 0; } to { background-position: 0 0; } }
+  @media (prefers-reduced-motion: reduce) { #pform.reading .input:placeholder-shown { animation: none; background: var(--ai-soft); } }
+  .btn .spin { width: 12px; height: 12px; margin-right: 2px; }
+  #pform .input.fromcv { background: var(--ai-soft); border-color: color-mix(in srgb, var(--ai) 35%, transparent); }
+  .pmore { padding: 4px 20px 16px 244px; }
+  .pmore[hidden] { display: none; }
+  .sfield small { font-weight: 400; color: var(--muted-foreground); }
+  #pform .input::placeholder { color: var(--muted-foreground); opacity: .6; }
+  .paytbl { display: grid; grid-template-columns: 72px minmax(0, .8fr) minmax(0, 1.4fr) minmax(0, 1.4fr) minmax(0, .8fr); gap: 8px 10px; align-items: center; }
+  .paytbl .h { font-size: 12px; color: var(--muted-foreground); }
+  .paytbl .r { font-size: 13px; font-weight: 600; }
+  .paytbl .none { font-size: 12px; color: var(--muted-foreground); padding-left: 10px; }
+  .pbar { position: sticky; bottom: 12px; z-index: 2; display: flex; gap: 8px; align-items: center; margin: 0 12px 12px; padding: 8px 8px 8px 16px; border-radius: 12px; background: var(--card); border: 1px solid var(--border); box-shadow: 0 8px 24px rgb(0 0 0 / .1); font-size: 13px; }
+  .pbar[hidden] { display: none; }
+  @media (max-width: 760px) {
+    .psec { grid-template-columns: 1fr; gap: 12px; }
+    .sfield, .sfield.w3, .sfield.w4 { grid-column: 1 / -1; }
+    .pmore { padding-left: 20px; }
+    .paytbl { grid-template-columns: 1fr 1fr; }
+    .paytbl .h { display: none; }
+    .paytbl .r { grid-column: 1 / -1; margin-top: 6px; }
+  }
   .arow { display: grid; grid-template-columns: minmax(120px, 200px) 1fr auto; gap: 8px; align-items: start; margin-bottom: 8px; }
   @media (max-width: 640px) { .arow { grid-template-columns: 1fr auto; } .arow textarea { grid-column: 1 / -1; grid-row: 2; } }
   .note { padding: 10px 12px; border-radius: 12px; font-size: 13px; }
@@ -299,21 +337,25 @@
       </div>
     </div>
     <div class="card" style="padding:6px;margin-bottom:16px">
-      <div id="steps"></div>
+      <div id="steps"><div class="step"><span class="spin"></span><span class="muted xs">Checking the extension, the helper and Claude Code…</span></div></div>
     </div>
 
     <div id="s-forms" hidden>
       <div class="card" style="padding:16px;margin-bottom:16px">
-        <div class="row" style="margin-bottom:12px"><h3 style="margin:0">Your profile</h3><span class="grow"></span><span class="muted xs" id="p-note"></span></div>
-        <form id="pform" class="sgrid"></form>
-        <div class="row" style="margin-top:14px"><button class="btn brand" id="p-save">Save profile</button><span class="muted xs" id="p-saved"></span></div>
-      </div>
-
-      <div class="card" style="padding:16px;margin-bottom:16px">
         <h3 style="margin:0 0 4px">Resume</h3>
-        <p class="muted xs" style="margin:0 0 10px">A PDF. The extension attaches it to application forms for you.</p>
+        <p class="muted xs" style="margin:0 0 10px">A PDF. The extension attaches it to application forms, and Claude can fill your profile from it.</p>
         <div class="row" style="gap:10px;flex-wrap:wrap"><input type="file" id="r-file" accept="application/pdf"><span class="muted xs" id="r-state"></span></div>
       </div>
+      <div class="card" style="margin-bottom:16px">
+        <div class="phead"><div><h3>Your profile</h3><span class="pmeter" id="p-meter"></span></div><span class="grow"></span>
+          <button class="btn ai" id="p-resume" type="button"><svg class="i"><use href="#i-spark"/></svg>Fill from resume</button>
+          <button class="btn brand" id="p-save" type="button" disabled>Save profile</button></div>
+        <div class="note pnote" id="p-note" hidden></div>
+        <form id="pform" autocomplete="off"></form>
+        <div class="pmore"><button class="btn ghost" id="p-more" type="button"></button></div>
+        <div class="pbar" id="p-bar" hidden><span class="grow" id="p-barText">Unsaved changes</span><button class="btn ghost" id="p-undo" type="button">Discard</button><button class="btn brand" id="p-save2" type="button">Save profile</button></div>
+      </div>
+
 
       <div class="card" style="padding:16px;margin-bottom:16px">
         <h3 style="margin:0 0 4px">Facts Claude may use</h3>
@@ -641,14 +683,36 @@ load().then(async () => {
 
 // ---- setup (first run, and the hosted site) ----
 const REPO = "https://github.com/kuldeepsaini23/apply-kit";
+// [key, label, { type, ph (an example), w (3, 4 or 6 of the 6 columns; default 2), hint, more (hidden until "More details") }]
 const PFIELDS = [
-  ["About you", [["fullName", "Full name"], ["email", "Email"], ["phone", "Phone (with country code)"], ["location", "Location (as you'd write it on a form)"], ["city", "City"], ["state", "State"], ["country", "Country"]]],
-  ["Links", [["linkedin", "LinkedIn URL"], ["github", "GitHub URL"], ["website", "Website or portfolio"], ["x", "X / Twitter URL"]]],
-  ["Work", [["company", "Current company"], ["title", "Current title"], ["years", "Years of experience", "number"], ["notice", "Notice period (text)"], ["noticeDays", "Notice period in days", "number"], ["startText", "When can you start"]]],
-  ["Pay", [["currentCTC", "Current pay (text, INR)"], ["currentCTCNum", "Current pay per year in ₹", "number"], ["expectedCTC", "Expected pay (text, INR)"], ["expectedCTCNum", "Expected pay per year in ₹", "number"], ["currentUSD", "Current pay (text, for USD forms)"], ["expectedUSD", "Expected pay (text, USD)"], ["expectedUSDNum", "Expected pay per year in $", "number"]]],
-  ["Eligibility", [["relocateText", "Open to relocating?"], ["workAuthText", "Work authorization"]]],
-  ["Education", [["school", "University"], ["degree", "Degree"], ["field", "Field of study"], ["gradYear", "Graduation year", "number"]]],
+  ["About you", "What every form asks first.", [
+    ["fullName", "Full name", { ph: "Alex Doe", w: 3 }], ["email", "Email", { type: "email", ph: "alex@example.com", w: 3 }],
+    ["phone", "Phone", { type: "tel", ph: "+91 90000 00000", hint: "with country code" }], ["location", "Location", { ph: "Bengaluru, India", w: 4 }],
+    ["city", "City", { ph: "Bengaluru", more: 1 }], ["state", "State", { ph: "Karnataka", more: 1 }], ["country", "Country", { ph: "India", more: 1 }]]],
+  ["Links", "Pasted into the URL fields.", [
+    ["linkedin", "LinkedIn", { type: "url", ph: "https://linkedin.com/in/…", w: 3 }], ["github", "GitHub", { type: "url", ph: "https://github.com/…", w: 3 }],
+    ["website", "Website or portfolio", { type: "url", ph: "https://…", w: 3, more: 1 }], ["x", "X / Twitter", { type: "url", ph: "https://x.com/…", w: 3, more: 1 }]]],
+  ["Work", "Your current job and when you can join.", [
+    ["company", "Current company", { ph: "Acme", w: 3 }], ["title", "Current title", { ph: "Software Engineer", w: 3 }],
+    ["years", "Years of experience", { type: "number", ph: "3" }], ["notice", "Notice period", { ph: "30 days", w: 4 }], ["noticeDays", "Notice in days", { type: "number", ph: "30", more: 1 }],
+    ["startText", "When can you start", { ph: "Within 30 days of an offer", w: 6, more: 1 }]]],
+  ["Pay", "Numbers go into number boxes; the written versions go into text boxes.", "pay"],
+  ["Eligibility", "Short answers to the usual yes/no questions.", [
+    ["relocateText", "Open to relocating?", { ph: "Yes, anywhere in India; also open to remote", w: 6, more: 1 }],
+    ["workAuthText", "Work authorization", { ph: "Indian citizen. India roles: no sponsorship needed.", w: 6, more: 1 }]]],
+  ["Education", "Your highest degree.", [
+    ["school", "University", { ph: "University of Delhi", w: 3, more: 1 }], ["degree", "Degree", { ph: "B.Tech Computer Science", w: 3, more: 1 }],
+    ["field", "Field of study", { ph: "Computer Science", w: 3, more: 1 }], ["gradYear", "Graduation year", { type: "number", ph: "2024", more: 1 }]]],
 ];
+const MORE = PFIELDS.flatMap(([, , l]) => Array.isArray(l) ? l.filter(([, , o]) => o.more).map(([k]) => k) : []).length;
+// Pay rows: label, then [key, example] for ₹ per year, written ₹, written for $ forms, $ per year.
+const PAY = [
+  ["Current", ["currentCTCNum", "1000000"], ["currentCTC", "₹10 LPA fixed"], ["currentUSD", "~$12K a year"], null],
+  ["Expected", ["expectedCTCNum", "1800000"], ["expectedCTC", "₹18–22 LPA, negotiable"], ["expectedUSD", "$2,500–3,500 a month"], ["expectedUSDNum", "36000"]],
+];
+const PAYKEYS = PAY.flatMap(([, ...c]) => c.filter(Boolean).map(([k]) => k));
+const NUMKEYS = new Set(["currentCTCNum", "expectedCTCNum", "expectedUSDNum", ...PFIELDS.flatMap(([, , l]) => Array.isArray(l) ? l.filter(([, , o]) => o.type === "number").map(([k]) => k) : [])]);
+const PKEYS = PFIELDS.flatMap(([, , l]) => Array.isArray(l) ? l.map(([k]) => k) : PAYKEYS);
 let setup = null, profile = {};
 
 function stepRow(ok, title, body, action = "") {
@@ -682,29 +746,107 @@ async function loadSetup() {
   return { serverOk, allDone };
 }
 
+const lakh = (n) => (n >= 100000 ? `₹${+(n / 100000).toFixed(1)} LPA` : "");
+const pInput = (k, o, v) =>
+  `<input class="input" name="${k}" type="${o.type === "number" ? "text" : o.type || "text"}"${o.type === "number" ? ' inputmode="numeric"' : ""} placeholder="${esc(o.ph || "")}" value="${esc(v ?? "")}" aria-label="${esc(o.label)}">`;
+function renderProfile(values) {
+  $("pform").innerHTML = PFIELDS.map(([group, why, list]) => {
+    const keys = Array.isArray(list) ? list.map(([k]) => k) : PAYKEYS;
+    const body = Array.isArray(list)
+      ? `<div class="sgrid">${list.map(([k, label, o]) =>
+          `<label class="sfield${o.w ? " w" + o.w : ""}${o.more ? " more" : ""}"><span>${esc(label)}${o.hint ? ` <small>${esc(o.hint)}</small>` : ""}</span>${pInput(k, { ...o, label }, values[k])}</label>`).join("")}</div>`
+      : `<div class="paytbl"><span></span><span class="h">₹ per year</span><span class="h">Written, ₹</span><span class="h">Written, for $ forms</span><span class="h">$ per year</span>${PAY.map(([row, ...cells]) =>
+          `<span class="r">${row}</span>` + cells.map((c, i) => c ? pInput(c[0], { type: i === 0 || i === 3 ? "number" : "text", ph: c[1], label: `${row} pay` }, values[c[0]]) : '<span class="none">Not asked</span>').join("")).join("")}</div>`;
+    const hidden = Array.isArray(list) && list.every(([, , o]) => o.more);
+    return `<section class="psec${hidden ? " more" : ""}" data-keys="${keys.join(" ")}"><div><h4>${esc(group)}</h4><p>${esc(why)}</p><span class="cnt"></span></div>${body}</section>`;
+  }).join("");
+  pRefresh();
+}
+function pValues() {
+  const v = {};
+  for (const el of $("pform").elements) if (el.name) v[el.name] = NUMKEYS.has(el.name) ? (el.value.trim() === "" ? null : +el.value.replace(/[^\d.]/g, "")) : el.value.trim();
+  return v;
+}
+let pSaved = {};
+function pRefresh() {
+  const v = pValues(), has = (k) => v[k] != null && v[k] !== "";
+  for (const sec of $("pform").querySelectorAll(".psec")) {
+    const keys = sec.dataset.keys.split(" "), n = keys.filter(has).length, c = sec.querySelector(".cnt");
+    c.textContent = `${n} of ${keys.length} filled`;
+    c.classList.toggle("full", n === keys.length);
+  }
+  const n = PKEYS.filter(has).length;
+  $("p-meter").innerHTML = `<i><b style="width:${Math.round((n / PKEYS.length) * 100)}%"></b></i>${n} of ${PKEYS.length} filled`;
+  const dirty = PKEYS.some((k) => (v[k] ?? "") !== (pSaved[k] ?? ""));
+  $("p-bar").hidden = !dirty;
+  $("p-save").disabled = !dirty;
+  $("p-more").textContent = $("pform").classList.contains("all") ? "Show fewer fields" : `More details (${MORE} fields: city, education, relocation…)`;
+  // Read the ₹ numbers back in lakhs, so 1800000 vs 180000 is easy to catch before saving.
+  const pay = [v.currentCTCNum && "now " + lakh(v.currentCTCNum), v.expectedCTCNum && "expected " + lakh(v.expectedCTCNum)].filter(Boolean);
+  $("p-barText").textContent = "Unsaved changes" + (pay.length ? ` · pay ${pay.join(", ")}` : "");
+}
+$("pform").addEventListener("input", (e) => { e.target.classList.remove("fromcv"); pRefresh(); });
+$("p-more").onclick = () => { $("pform").classList.toggle("all"); pRefresh(); };
+$("p-resume").onclick = async () => {
+  const b = $("p-resume"), form = $("pform");
+  b.disabled = true;
+  b.innerHTML = '<span class="spin"></span>Reading your resume… (~15s)';
+  form.classList.add("reading");
+  try {
+    const { fields } = await api("/api/profile/from-resume", {});
+    let n = 0;
+    for (const [k, val] of Object.entries(fields)) {
+      const el = $("pform").elements[k];
+      if (!el || el.value.trim() || val === "" || val == null) continue;
+      el.value = val; el.classList.add("fromcv"); n++;
+      if (el.closest(".more")) $("pform").classList.add("all");
+    }
+    const note = $("p-note");
+    note.hidden = false;
+    note.textContent = n ? `Filled ${n} empty boxes from your resume (shaded). Check them, then save.` : "Your resume had nothing new for the empty boxes.";
+    pRefresh();
+  } catch (e) { toast("Couldn't read the resume", e.message); }
+  form.classList.remove("reading");
+  b.disabled = false;
+  b.innerHTML = '<svg class="i"><use href="#i-spark"/></svg>Fill from resume';
+};
+
 async function loadSetupForms() {
   const [p, f] = await Promise.all([api("/api/profile"), api("/api/facts")]);
-  profile = p.missing ? { answers: {} } : p;
-  $("p-note").textContent = p.missing ? "Not saved yet" : "";
-  $("pform").innerHTML = PFIELDS.map(([group, list]) => `<div class="sgroup">${esc(group)}</div>` + list.map(([k, label, type]) =>
-    `<label class="sfield"><span>${esc(label)}</span><input class="input" name="${k}" type="${type || "text"}" value="${esc(profile[k] ?? "")}"></label>`).join("")).join("");
+  profile = p.missing ? { answers: p.suggested?.answers || {} } : p;
+  pSaved = p.missing ? {} : profile;
+  renderProfile(p.missing ? p.suggested || {} : profile);
+  $("p-note").hidden = !(p.missing && p.suggested);
+  $("p-note").textContent = "Filled in from your profile.js. Check it, then save.";
   $("f-text").value = f.text || "";
   $("f-private").hidden = !f.privateContext;
   $("r-state").textContent = setup.resume ? "A resume is uploaded. Pick a file to replace it." : "No resume yet.";
   renderAnswerRows(Object.entries(profile.answers || {}));
 }
 
+$("p-undo").onclick = () => { renderProfile(pSaved); $("p-note").hidden = true; };
+$("p-save2").onclick = () => $("p-save").click();
 $("p-save").onclick = async () => {
-  const next = { ...profile };
-  for (const el of $("pform").elements) if (el.name) next[el.name] = el.type === "number" ? (el.value === "" ? null : +el.value) : el.value.trim();
+  const next = { ...profile, ...pValues() };
   const [first, ...rest] = (next.fullName || "").split(/\s+/);
   Object.assign(next, { firstName: first || "", lastName: rest.join(" "), yearsText: next.years != null ? String(next.years) : "" });
-  try { await api("/api/profile", next); profile = next; $("p-saved").textContent = "Saved. Reopen the side panel to use it."; loadSetup(); }
-  catch (e) { toast("Couldn't save", e.message); }
+  const btns = [$("p-save"), $("p-save2")];
+  for (const b of btns) { b.disabled = true; b.innerHTML = '<span class="spin"></span>Saving…'; }
+  try {
+    await api("/api/profile", next);
+    profile = next; pSaved = next;
+    $("p-note").hidden = true;
+    pRefresh();
+    toast("Profile saved", "Reopen the side panel to use it.");
+    loadSetup();
+  } catch (e) { toast("Couldn't save", e.message); }
+  for (const b of btns) { b.disabled = false; b.textContent = "Save profile"; }
+  pRefresh();
 };
 
 $("r-file").onchange = async (e) => {
   const file = e.target.files[0]; if (!file) return;
+  $("r-state").innerHTML = '<span class="spin"></span> Uploading…';
   const buf = new Uint8Array(await file.arrayBuffer());
   let s = "";
   for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
