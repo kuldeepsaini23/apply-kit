@@ -1,59 +1,63 @@
-/* Apply Kit UI: Proofly's design system (tokens, key buttons, raised cards), plain CSS.
-   Used by popup.html (extension) and server/dashboard.html (served at /ui.css). */
+/* Apply Kit UI: tokens, buttons and cards in plain CSS, in the style of the Koomerce admin
+   (neutral black and white, Plus Jakarta Sans, flat surfaces with a hairline ring).
+   Used by panel.html (extension) and server/dashboard.html (served at /ui.css). */
 
 :root {
-  --background: #F7F8FA; --foreground: #111318; --card: #FFFFFF;
-  --primary: #0E9F6E; --primary-foreground: #FFFFFF;
-  --secondary: #EEF0F3; --muted: #F1F2F4; --muted-foreground: #5E6470; --accent: #E8F7F0;
-  --border: #E6E8EC; --input: #E3E6EB; --ring: #0E9F6E;
-  --success: oklch(0.72 0.17 149); --success-soft: oklch(0.95 0.05 149); --success-ink: oklch(0.45 0.13 149);
-  --warn: oklch(0.78 0.15 75); --warn-soft: oklch(0.96 0.05 85); --warn-ink: oklch(0.5 0.12 65);
-  --danger: oklch(0.63 0.19 23); --danger-soft: oklch(0.96 0.03 23);
-  --ai: #7C5CE0; --ai-soft: #F1ECFF; --ai-ink: #5B3FC4;
-  --key-top: #E9F9F1; --key-bottom: #CDEFDF; --key-border: #A3DDC2; --key-edge: rgb(14 120 85 / .28);
-  --key-glow: rgb(14 159 110 / .34); --key-ink: #07704D; --key-highlight: rgb(255 255 255 / .9);
-  --surface-top: #FFFFFF; --surface-bottom: #F5F6F8; --surface-edge: rgb(17 19 24 / .06);
-  --surface-highlight: rgb(255 255 255 / .9);
-  --surface-drop: 0 1px 2px rgb(17 19 24 / .05), 0 12px 28px -14px rgb(17 19 24 / .22);
+  --shell: #FAFAFA; --background: #FFFFFF; --panel-border: #E5E5E5;
+  --foreground: #0A0A0A; --card: #FFFFFF;
+  --primary: #171717; --primary-foreground: #FAFAFA;
+  --secondary: #F5F5F5; --muted: #F5F5F5; --muted-foreground: #737373; --accent: #F5F5F5; --nav-active: #EFEFEF;
+  --border: #E5E5E5; --input: #E5E5E5; --ring: #A3A3A3;
+  --success: #10B981; --success-soft: #ECFDF5; --success-ink: #047857;
+  --warn: #F59E0B; --warn-soft: #FFFBEB; --warn-ink: #B45309;
+  --danger: #E7000B; --danger-soft: #FEF2F2;
+  --ai: #171717; --ai-soft: #F5F5F5; --ai-ink: #171717;
+  --key-top: #262626; --key-bottom: #171717; --key-border: #171717; --key-edge: transparent;
+  --key-glow: rgb(0 0 0 / .18); --key-ink: #FAFAFA; --key-highlight: rgb(255 255 255 / .1);
+  --surface-top: #FFFFFF; --surface-bottom: #FFFFFF; --surface-edge: transparent;
+  --surface-highlight: transparent;
+  --surface-drop: 0 1px 2px rgb(0 0 0 / .04);
   --radius: .75rem;
-  --font-sans: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --font-display: "Bricolage Grotesque", "DM Sans", system-ui, sans-serif;
+  --font-sans: "Plus Jakarta Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --font-display: "Plus Jakarta Sans", system-ui, sans-serif;
   --font-mono: "Geist Mono", ui-monospace, Consolas, monospace;
   color-scheme: light;
 }
 
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
-    --background: #0E0F12; --foreground: #F2F3F5; --card: #16171B;
-    --primary: #34D399; --primary-foreground: #052E1F;
-    --secondary: #1F2126; --muted: #1C1D22; --muted-foreground: #9AA0AB; --accent: #11281F;
-    --border: #2A2C33; --input: #2E3038; --ring: #34D399;
-    --success-soft: oklch(0.3 0.06 149); --success-ink: oklch(0.82 0.14 149);
-    --warn-soft: oklch(0.32 0.06 75); --warn-ink: oklch(0.85 0.12 80);
-    --danger-soft: oklch(0.3 0.07 23);
-    --ai: #A48BFA; --ai-soft: #251D3D; --ai-ink: #D5C8FF;
-    --key-top: #1B4535; --key-bottom: #143528; --key-border: #2A6B50; --key-edge: rgb(0 0 0 / .35);
-    --key-glow: rgb(16 130 90 / .45); --key-ink: #D1FAE5; --key-highlight: rgb(255 255 255 / .12);
-    --surface-top: #1B1C21; --surface-bottom: #16171B; --surface-edge: rgb(0 0 0 / .35);
-    --surface-highlight: rgb(255 255 255 / .05);
-    --surface-drop: 0 1px 2px rgb(0 0 0 / .4), 0 14px 30px -16px rgb(0 0 0 / .6);
+    --shell: #050505; --background: #0A0A0A; --panel-border: rgb(255 255 255 / .1);
+    --foreground: #FAFAFA; --card: #141414;
+    --primary: #E5E5E5; --primary-foreground: #171717;
+    --secondary: #262626; --muted: #1F1F1F; --muted-foreground: #A1A1A1; --accent: #1F1F1F; --nav-active: #1C1C1C;
+    --border: rgb(255 255 255 / .1); --input: rgb(255 255 255 / .14); --ring: #737373;
+    --success-soft: rgb(16 185 129 / .14); --success-ink: #6EE7B7;
+    --warn-soft: rgb(245 158 11 / .14); --warn-ink: #FCD34D;
+    --danger: #FF6467; --danger-soft: rgb(255 100 103 / .14);
+    --ai: #FAFAFA; --ai-soft: #1F1F1F; --ai-ink: #FAFAFA;
+    --key-top: #FAFAFA; --key-bottom: #E5E5E5; --key-border: #E5E5E5; --key-edge: transparent;
+    --key-glow: rgb(0 0 0 / .4); --key-ink: #171717; --key-highlight: transparent;
+    --surface-top: #141414; --surface-bottom: #141414; --surface-edge: transparent;
+    --surface-highlight: transparent;
+    --surface-drop: 0 1px 2px rgb(0 0 0 / .4);
     color-scheme: dark;
   }
 }
 :root[data-theme="dark"] {
-  --background: #0E0F12; --foreground: #F2F3F5; --card: #16171B;
-  --primary: #34D399; --primary-foreground: #052E1F;
-  --secondary: #1F2126; --muted: #1C1D22; --muted-foreground: #9AA0AB; --accent: #11281F;
-  --border: #2A2C33; --input: #2E3038; --ring: #34D399;
-  --success-soft: oklch(0.3 0.06 149); --success-ink: oklch(0.82 0.14 149);
-  --warn-soft: oklch(0.32 0.06 75); --warn-ink: oklch(0.85 0.12 80);
-  --danger-soft: oklch(0.3 0.07 23);
-  --ai: #A48BFA; --ai-soft: #251D3D; --ai-ink: #D5C8FF;
-  --key-top: #1B4535; --key-bottom: #143528; --key-border: #2A6B50; --key-edge: rgb(0 0 0 / .35);
-  --key-glow: rgb(16 130 90 / .45); --key-ink: #D1FAE5; --key-highlight: rgb(255 255 255 / .12);
-  --surface-top: #1B1C21; --surface-bottom: #16171B; --surface-edge: rgb(0 0 0 / .35);
-  --surface-highlight: rgb(255 255 255 / .05);
-  --surface-drop: 0 1px 2px rgb(0 0 0 / .4), 0 14px 30px -16px rgb(0 0 0 / .6);
+  --shell: #050505; --background: #0A0A0A; --panel-border: rgb(255 255 255 / .1);
+  --foreground: #FAFAFA; --card: #141414;
+  --primary: #E5E5E5; --primary-foreground: #171717;
+  --secondary: #262626; --muted: #1F1F1F; --muted-foreground: #A1A1A1; --accent: #1F1F1F; --nav-active: #1C1C1C;
+  --border: rgb(255 255 255 / .1); --input: rgb(255 255 255 / .14); --ring: #737373;
+  --success-soft: rgb(16 185 129 / .14); --success-ink: #6EE7B7;
+  --warn-soft: rgb(245 158 11 / .14); --warn-ink: #FCD34D;
+  --danger: #FF6467; --danger-soft: rgb(255 100 103 / .14);
+  --ai: #FAFAFA; --ai-soft: #1F1F1F; --ai-ink: #FAFAFA;
+  --key-top: #FAFAFA; --key-bottom: #E5E5E5; --key-border: #E5E5E5; --key-edge: transparent;
+  --key-glow: rgb(0 0 0 / .4); --key-ink: #171717; --key-highlight: transparent;
+  --surface-top: #141414; --surface-bottom: #141414; --surface-edge: transparent;
+  --surface-highlight: transparent;
+  --surface-drop: 0 1px 2px rgb(0 0 0 / .4);
   color-scheme: dark;
 }
 
@@ -84,7 +88,7 @@ svg.i { width: 16px; height: 16px; flex: none; stroke: currentColor; fill: none;
   background: var(--card);
   background-image: linear-gradient(180deg, var(--surface-top), var(--surface-bottom));
   box-shadow: 0 0 0 1px var(--border), inset 0 1px 0 var(--surface-highlight), inset 0 -2px 0 var(--surface-edge), var(--surface-drop);
-  border-radius: 1rem; padding: 16px;
+  border-radius: 12px; padding: 16px;
 }
 .card-title { font-family: var(--font-display); font-size: 15px; font-weight: 600; letter-spacing: -.01em; }
 
@@ -146,3 +150,4 @@ textarea.input { height: auto; min-height: 140px; padding: 10px; line-height: 1.
 
 /* Output block */
 .out { white-space: pre-wrap; background: var(--muted); border: 1px solid var(--border); border-radius: 12px; padding: 12px; font-size: 13px; line-height: 1.55; margin: 0; }
+a:hover { text-decoration: underline; text-underline-offset: 3px; }
