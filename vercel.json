@@ -1,7 +1,7 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "installCommand": "echo no install needed",
-  "buildCommand": "cd server && bun build-site.ts",
+  "buildCommand": "cd server && (bun build-site.ts || npx -y bun build-site.ts)",
   "outputDirectory": "site",
   "headers": [
     {
