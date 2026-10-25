@@ -37,7 +37,8 @@
     {
       "matches": [
         "http://localhost:4777/*",
-        "http://127.0.0.1:4777/*"
+        "http://127.0.0.1:4777/*",
+        "https://apply-kit-app.vercel.app/*"
       ],
       "js": [
         "bridge.js"

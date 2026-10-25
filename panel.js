@@ -1,9 +1,9 @@
 // The whole extension UI: a side panel that stays open while you fill, follows the active tab,
 // and rescans when the page changes. Apply (form fields + answers), Job (score, DMs), People (Find HR).
-import { runFill, aiFill, readPage, guidePage, showField, attachTo, api, serverUp } from "./lib.js";
+import { runFill, aiFill, readPage, guidePage, showField, attachTo, api, serverUp, loadProfile } from "./lib.js";
 
 const $ = (id) => document.getElementById(id);
-const P = globalThis.APPLY_PROFILE;
+let P = globalThis.APPLY_PROFILE || { answers: {} };
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const bullets = (arr) => arr.map((x) => "• " + x).join("\n");
 let tab, info = {}, fields = [], done = new Set(), up = false, scanId = 0, showDone = false;
@@ -293,17 +293,20 @@ $("dmbtn").onclick = async () => {
   } catch (e) { $("aiscore").textContent = "Failed: " + e.message; }
 };
 
-for (const [label, text] of Object.entries(P.answers || {})) {
-  const r = document.createElement("div");
-  r.className = "ans";
-  r.title = text;
-  r.innerHTML = `<span>${esc(label)}</span><button class="btn sm">Copy</button>`;
-  r.querySelector("button").onclick = async (e) => {
-    await navigator.clipboard.writeText(text);
-    e.target.textContent = "Copied";
-    setTimeout(() => (e.target.textContent = "Copy"), 900);
-  };
-  $("answers").appendChild(r);
+function renderAnswers() {
+  $("answers").innerHTML = Object.keys(P.answers || {}).length ? "" : '<div class="muted xs">Add saved answers on the dashboard Setup page.</div>';
+  for (const [label, text] of Object.entries(P.answers || {})) {
+    const r = document.createElement("div");
+    r.className = "ans";
+    r.title = text;
+    r.innerHTML = `<span>${esc(label)}</span><button class="btn sm">Copy</button>`;
+    r.querySelector("button").onclick = async (e) => {
+      await navigator.clipboard.writeText(text);
+      e.target.textContent = "Copied";
+      setTimeout(() => (e.target.textContent = "Copy"), 900);
+    };
+    $("answers").appendChild(r);
+  }
 }
 
 // ---------- People tab ----------
@@ -346,6 +349,8 @@ $("rescan").onclick = () => { checkServer(); scan(); };
   const { currency = "INR" } = await chrome.storage.local.get("currency");
   await setCurrency(currency);
   await checkServer();
+  P = await loadProfile();
+  renderAnswers();
   refreshLog();
   scan();
   setInterval(checkServer, 30000);

@@ -1,4 +1,4 @@
-// Runs only on the dashboard (localhost:4777). Lets the page talk to the extension.
+// Runs only on the dashboard (localhost:4777 or the hosted site). Lets the page talk to the extension.
 window.addEventListener("message", (e) => {
   if (e.source !== window || e.data?.source !== "applykit-dashboard") return;
   const { id, ...msg } = e.data;

@@ -12,7 +12,20 @@ export async function serverUp() {
   try { return (await api("/api/health")).ok; } catch { return false; }
 }
 
+// Your profile: the one saved on the Setup page (local server) wins; profile.js in the extension folder is the fallback.
+async function savedProfile() {
+  try { const p = await api("/api/profile"); if (!p.missing) return { answers: {}, ...p }; } catch {}
+  return null;
+}
+// For extension pages (side panel), which load profile.js with a <script> tag.
+export async function loadProfile() {
+  return (await savedProfile()) || globalThis.APPLY_PROFILE || { answers: {} };
+}
+const hasProfileJs = () => fetch(chrome.runtime.getURL("profile.js")).then((r) => r.ok, () => false);
+
+// Resume: the one uploaded on the Setup page, else resume.pdf in the extension folder.
 async function resumeB64() {
+  try { const r = await api("/api/resume"); if (r.b64) return r.b64; } catch {}
   const buf = new Uint8Array(await (await fetch(chrome.runtime.getURL("resume.pdf"))).arrayBuffer());
   let s = "";
   for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
@@ -20,7 +33,11 @@ async function resumeB64() {
 }
 
 async function inject(tabId) {
-  await chrome.scripting.executeScript({ target: { tabId, allFrames: true }, files: ["profile.js", "fill.js"] });
+  const target = { tabId, allFrames: true };
+  const profile = await savedProfile();
+  if (profile) await chrome.scripting.executeScript({ target, func: (p) => { globalThis.APPLY_PROFILE = p; }, args: [profile] });
+  else if (await hasProfileJs()) await chrome.scripting.executeScript({ target, files: ["profile.js"] });
+  await chrome.scripting.executeScript({ target, files: ["fill.js"] });
 }
 
 async function inFrames(tabId, func, args = []) {

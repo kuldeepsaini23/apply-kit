@@ -5,7 +5,8 @@
   "scripts": {
     "start": "bun server.ts",
     "eval:rag": "bun rag-eval.ts",
-    "test": "bun test"
+    "test": "bun test",
+    "build:site": "bun build-site.ts"
   },
   "dependencies": {
     "@huggingface/transformers": "3"

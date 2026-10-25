@@ -11,3 +11,5 @@ NOTES-private.md
 server/rag-eval.cases.json
 server/node_modules/
 __pycache__/
+site/
+.vercel/

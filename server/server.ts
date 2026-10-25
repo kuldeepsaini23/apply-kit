@@ -7,15 +7,27 @@ import { Index, asContext } from "./rag";
 import { findContacts, slug, type FindInput, type Research } from "./contacts";
 import { Ledger } from "./contacts/ledger";
 
-const PORT = 4777;
+const PORT = Number(process.env.APPLYKIT_PORT) || 4777;
 const DIR = import.meta.dir;
 // Your prepared applications (markdown "packs"). Override with APPLYKIT_PACKS.
 const PACKS = process.env.APPLYKIT_PACKS || (existsSync(join(DIR, "..", "..", "applications")) ? join(DIR, "..", "..", "applications") : join(DIR, "..", "packs"));
-const DATA = join(DIR, "data");
+// Everything you save lives here. Override with APPLYKIT_DATA (tests use a temp folder).
+const DATA = process.env.APPLYKIT_DATA || join(DIR, "data");
 const APPS = join(DATA, "applications.json");
 const MODEL = process.env.APPLYKIT_MODEL || "sonnet";
 // Your profile + rules for Claude. context.md is private (gitignored); the example is the template.
-const CONTEXT = existsSync(join(DIR, "context.md")) ? join(DIR, "context.md") : join(DIR, "context.example.md");
+// Without context.md, the facts you enter on the Setup page replace the template's PROFILE section.
+const FACTS = join(DATA, "facts.md");
+function contextFile(): string {
+  if (existsSync(join(DIR, "context.md"))) return join(DIR, "context.md");
+  const example = join(DIR, "context.example.md");
+  if (!existsSync(FACTS)) return example;
+  const out = join(DATA, "context.generated.md");
+  const tpl = readFileSync(example, "utf8");
+  const facts = readFileSync(FACTS, "utf8").trim();
+  writeFileSync(out, tpl.replace(/# PROFILE[\s\S]*?(?=\n# HUMAN WRITING)/, `# PROFILE\n\n${facts}\n`));
+  return out;
+}
 // Dashboard settings (name, email, deadline). config.json is private; see config.example.json.
 const CONFIG_FILE = existsSync(join(DIR, "config.json")) ? join(DIR, "config.json") : join(DIR, "config.example.json");
 
@@ -27,7 +39,7 @@ async function claude(prompt: string, { web = false } = {}): Promise<string> {
   const tools = web ? ["--tools", "WebSearch,WebFetch", "--allowedTools", "WebSearch", "WebFetch"] : ["--tools", ""];
   const proc = Bun.spawn(
     ["claude", "-p", "--model", MODEL, ...tools, "--no-session-persistence", "--setting-sources", "", "--strict-mcp-config",
-     "--system-prompt-file", CONTEXT, "--output-format", "json"],
+     "--system-prompt-file", contextFile(), "--output-format", "json"],
     { stdin: new Blob([prompt]), stdout: "pipe", stderr: "pipe", cwd: DATA },
   );
   const [out, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
@@ -121,6 +133,8 @@ const writeApps = (a: any[]) => writeFileSync(APPS, JSON.stringify(a, null, 2));
 const PEOPLE = join(DATA, "people");
 const CONNS = join(DATA, "connections.json");
 const OUTREACH = join(DATA, "outreach.json");
+const PROFILE = join(DATA, "profile.json");
+const RESUME = join(DATA, "resume.pdf");
 if (!existsSync(PEOPLE)) mkdirSync(PEOPLE);
 const readJson = (f: string, d: any) => (existsSync(f) ? JSON.parse(readFileSync(f, "utf8")) : d);
 
@@ -249,6 +263,39 @@ const send = (req: Request, body: any, status = 200) =>
 
 const routes: Record<string, (b: any) => Promise<any> | any> = {
   "GET /api/health": () => ({ ok: true, model: MODEL }),
+
+  // ---- Setup: what a new user enters in the dashboard instead of editing files ----
+  "GET /api/setup": async () => {
+    let claudeInstalled = false;
+    try { const p = Bun.spawn(["claude", "--version"], { stdout: "pipe", stderr: "pipe" }); claudeInstalled = (await p.exited) === 0; } catch {}
+    return {
+      claudeInstalled, profile: existsSync(PROFILE), resume: existsSync(RESUME), facts: existsSync(FACTS) || existsSync(join(DIR, "context.md")),
+      privateContext: existsSync(join(DIR, "context.md")),
+    };
+  },
+  // A tiny prompt to prove `claude -p` is logged in.
+  "POST /api/setup/test-claude": async () => ({ reply: (await claude('Reply with exactly: {"ok":true}')).slice(0, 80) }),
+  "GET /api/profile": () => readJson(PROFILE, null) ?? { missing: true },
+  "POST /api/profile": (b) => {
+    if (!b || typeof b !== "object" || Array.isArray(b)) throw new Error("profile must be an object");
+    const clean = Object.fromEntries(Object.entries(b).filter(([k, v]) => /^[a-zA-Z]{1,40}$/.test(k) && (typeof v !== "object" || k === "answers")));
+    writeFileSync(PROFILE, JSON.stringify(clean, null, 1));
+    return { ok: true };
+  },
+  "GET /api/facts": () => ({ text: existsSync(FACTS) ? readFileSync(FACTS, "utf8") : "", privateContext: existsSync(join(DIR, "context.md")) }),
+  "POST /api/facts": (b) => {
+    const text = String(b.text || "").slice(0, 40000);
+    writeFileSync(FACTS, text);
+    return { ok: true, chars: text.length };
+  },
+  // Resume as base64 so the extension can attach it to forms.
+  "GET /api/resume": () => (existsSync(RESUME) ? { name: readJson(PROFILE, {}).resumeFileName || "Resume.pdf", b64: readFileSync(RESUME).toString("base64") } : { missing: true }),
+  "POST /api/resume": (b) => {
+    const buf = Buffer.from(String(b.b64 || ""), "base64");
+    if (buf.length < 100 || buf.length > 5_000_000 || buf.subarray(0, 4).toString() !== "%PDF") throw new Error("upload a PDF under 5 MB");
+    writeFileSync(RESUME, buf);
+    return { ok: true, bytes: buf.length };
+  },
   // Keys and tokens never leave the server.
   "GET /api/config": () => Object.fromEntries(Object.entries(config()).filter(([k]) => !/_(key|token)$/.test(k))),
   // Debug/inspect retrieval: {q, k?, mode?: "bm25" | "vector" | "hybrid"}

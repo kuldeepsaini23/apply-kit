@@ -19,6 +19,12 @@ Built in October 2026 with Claude Code.
 - **RAG over your own notes**: point `docs` in `server/config.json` at your markdown notes (project write-ups, past achievements). Every Claude call retrieves the most relevant facts with hybrid search and adds them to the prompt, so answers use the right details instead of one fixed profile.
 - **Board scanner** (`tools/scan-boards.py`): pulls live roles from Ashby, Greenhouse and Lever job boards and filters them to your profile.
 
+## Hosted dashboard
+
+The dashboard can also run as a static site (`bun run build:site` in `server/`, then deploy `site/` to Vercel or any static host). It holds no data and runs no AI. In the browser, it talks to the Apply Kit extension, which forwards each request to the helper (`server/server.ts`) on your own computer, which runs Claude Code on your own login. Your profile, resume and tracker stay on your machine. The extension only accepts these requests from the sites listed in `background.js` (`DASHBOARDS`) and `manifest.json`.
+
+New users set up from the dashboard's **Setup** tab: it checks the extension, the helper and Claude Code, and takes the profile, resume (PDF), the facts Claude may use, and saved answers. Those are saved in `server/data/` (or `APPLYKIT_DATA`), so nobody needs to edit `profile.js` or `context.md` by hand.
+
 ## Setup
 
 Requirements: Chrome, [Bun](https://bun.sh), and [Claude Code](https://claude.com/claude-code) logged in (the server calls `claude -p`, so it runs on your Claude plan, no API key needed).

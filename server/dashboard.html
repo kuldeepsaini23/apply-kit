@@ -41,6 +41,20 @@
   .ro { font-size: 12.5px; color: var(--muted-foreground); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .acts { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
   .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  .step { display: flex; gap: 12px; align-items: center; padding: 12px; border-top: 1px solid var(--border); }
+  .step:first-child { border-top: 0; }
+  .step code, .page-head code { font: 12px var(--font-mono); background: var(--muted); padding: 1px 5px; border-radius: 5px; }
+  .sdot { flex: none; display: grid; place-items: center; width: 26px; height: 26px; border-radius: 50%; background: var(--muted); color: var(--muted-foreground); font-weight: 700; font-size: 13px; }
+  .sdot.ok { background: var(--success-soft); color: var(--success-ink); }
+  .sdot.bad { background: var(--warn-soft); color: var(--warn-ink); }
+  .sgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(230px, 1fr)); gap: 10px 14px; }
+  .sgroup { grid-column: 1 / -1; font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted-foreground); margin-top: 6px; }
+  .sfield { display: grid; gap: 4px; font-size: 12.5px; color: var(--muted-foreground); }
+  .arow { display: grid; grid-template-columns: minmax(120px, 200px) 1fr auto; gap: 8px; align-items: start; margin-bottom: 8px; }
+  @media (max-width: 640px) { .arow { grid-template-columns: 1fr auto; } .arow textarea { grid-column: 1 / -1; grid-row: 2; } }
+  .note { padding: 10px 12px; border-radius: 12px; font-size: 13px; }
+  .note.warn { background: var(--warn-soft); color: var(--warn-ink); }
+  .dot.warn { background: var(--warn); }
   .empty { display: grid; place-items: center; text-align: center; padding: 40px 16px; color: var(--muted-foreground); gap: 6px; }
   .empty .ring { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; }
   table { width: 100%; border-collapse: collapse; }
@@ -134,7 +148,7 @@
       <span class="crumb hide-sm">/</span>
       <span class="muted hide-sm" style="font-size:13.5px;font-weight:500" id="cfg-title">Job hunt</span>
       <div class="row" style="margin-left:auto;gap:6px">
-        <span class="badge" title="Local Claude server"><span class="dot on"></span><span class="hide-sm">Claude</span></span>
+        <span class="badge" id="srvbadge" title="Apply Kit helper on your computer"><span class="dot" id="srvdot"></span><span class="hide-sm" id="srvtext">Claude</span></span>
         <span class="badge" id="extbadge" title="Chrome extension"><span class="dot" id="extdot"></span><span id="exttext">Extension</span></span>
         <button class="btn ghost icon" id="theme" title="Toggle theme"><svg class="i"><use href="#i-moon"/></svg></button>
       </div>
@@ -145,6 +159,7 @@
       <button class="tab" role="tab" data-tab="quick">Any job</button>
       <button class="tab" role="tab" data-tab="apps">Applications <span class="count" id="c-apps">–</span></button>
       <button class="tab" role="tab" data-tab="network">Network <span class="count" id="c-out">–</span></button>
+      <button class="tab" role="tab" data-tab="setup">Setup <span class="dot" id="setupdot"></span></button>
     </nav>
   </div>
 </header>
@@ -275,6 +290,47 @@
       </div>
     </div>
   </section>
+  <!-- SETUP -->
+  <section data-panel="setup" hidden>
+    <div class="page-head">
+      <div>
+        <h1>Setup</h1>
+        <p>Apply Kit fills job applications, writes answers and finds people to contact. The AI runs on <b>your own computer</b> with your own Claude Code login, so your profile and data never leave it. This page only talks to your computer through the extension.</p>
+      </div>
+    </div>
+    <div class="card" style="padding:6px;margin-bottom:16px">
+      <div id="steps"></div>
+    </div>
+
+    <div id="s-forms" hidden>
+      <div class="card" style="padding:16px;margin-bottom:16px">
+        <div class="row" style="margin-bottom:12px"><h3 style="margin:0">Your profile</h3><span class="grow"></span><span class="muted xs" id="p-note"></span></div>
+        <form id="pform" class="sgrid"></form>
+        <div class="row" style="margin-top:14px"><button class="btn brand" id="p-save">Save profile</button><span class="muted xs" id="p-saved"></span></div>
+      </div>
+
+      <div class="card" style="padding:16px;margin-bottom:16px">
+        <h3 style="margin:0 0 4px">Resume</h3>
+        <p class="muted xs" style="margin:0 0 10px">A PDF. The extension attaches it to application forms for you.</p>
+        <div class="row" style="gap:10px;flex-wrap:wrap"><input type="file" id="r-file" accept="application/pdf"><span class="muted xs" id="r-state"></span></div>
+      </div>
+
+      <div class="card" style="padding:16px;margin-bottom:16px">
+        <h3 style="margin:0 0 4px">Facts Claude may use</h3>
+        <p class="muted xs" style="margin:0 0 10px">Your experience, projects with real numbers, skills, and things to never claim. Claude writes answers and messages only from what's here, and leaves a question blank rather than invent something. Plain notes are fine; headings help.</p>
+        <div class="note warn" id="f-private" hidden style="margin-bottom:10px">This computer has <b>server/context.md</b>, which Claude uses instead of this box.</div>
+        <textarea class="input" id="f-text" rows="14" placeholder="## Experience&#10;- Backend engineer at Acme (2023–now): moved billing to Postgres, cut p95 latency 40%…&#10;&#10;## Projects&#10;- …&#10;&#10;## Never claim&#10;- Kubernetes in production"></textarea>
+        <div class="row" style="margin-top:10px"><button class="btn brand" id="f-save">Save facts</button><span class="muted xs" id="f-saved"></span></div>
+      </div>
+
+      <div class="card" style="padding:16px">
+        <h3 style="margin:0 0 4px">Saved answers</h3>
+        <p class="muted xs" style="margin:0 0 10px">Answers you paste often (why you're looking, how you work). They show in the side panel with a Copy button.</p>
+        <div id="a-rows"></div>
+        <div class="row" style="margin-top:10px;gap:8px"><button class="btn" id="a-add">Add answer</button><button class="btn brand" id="a-save">Save answers</button><span class="muted xs" id="a-saved"></span></div>
+      </div>
+    </div>
+  </section>
 </main>
 
 <div id="sheetwrap">
@@ -322,7 +378,7 @@ function showTab(name) {
   try { localStorage.setItem("ak-tab", name); } catch {}
 }
 document.querySelectorAll(".tab").forEach((t) => (t.onclick = () => showTab(t.dataset.tab)));
-try { const t = localStorage.getItem("ak-tab"); if (t) showTab(t); } catch {}
+try { const t = location.hash.slice(1) || localStorage.getItem("ak-tab"); if (t && document.querySelector(`[data-panel="${CSS.escape(t)}"]`)) showTab(t); } catch {}
 
 // ---- toast ----
 function toast(title, body = "", ms = 6000) {
@@ -333,7 +389,19 @@ function toast(title, body = "", ms = 6000) {
   toast.t = setTimeout(() => t.classList.remove("show"), ms);
 }
 
+// Served by your local helper: call it directly. Hosted (Vercel): go through the extension,
+// which forwards to the helper on localhost, so your data never touches the hosting server.
+const LOCAL = location.protocol === "http:" && /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
+let extReady;
+const extKnown = new Promise((r) => (extReady = r));
 async function api(path, body) {
+  if (!LOCAL) {
+    await extKnown;
+    if (!ext) throw new Error("Apply Kit extension not installed");
+    const res = await toExt({ type: "api", path, body }, 330000);
+    if (res?.error) throw new Error(res.offline ? "Apply Kit helper isn't running on this computer" : res.error);
+    return res;
+  }
   const r = await fetch(path, body === undefined ? {} : { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) });
   const j = await r.json();
   if (!r.ok) throw new Error(j.error || r.statusText);
@@ -356,6 +424,7 @@ function toExt(msg, timeout = 180000) {
 }
 function setExt(on, v) {
   ext = on;
+  extReady();
   $("extdot").classList.toggle("on", on);
   $("exttext").textContent = on ? `Extension v${v}` : "Extension off";
   $("extbadge").title = on ? "Chrome extension connected" : "Load the extension in chrome://extensions, then refresh";
@@ -542,19 +611,125 @@ $("copyrows").onclick = async () => {
   toast(`Copied ${apps.length} row(s)`, "Paste them into applications/TRACKER.md.");
 };
 
+function setServer(on) {
+  $("srvdot").classList.toggle("on", on);
+  $("srvtext").textContent = on ? "Claude" : "Helper off";
+}
+
 async function load() {
-  [packs, apps, CFG] = await Promise.all([api("/api/packs"), api("/api/applications"), api("/api/config")]);
+  try { [packs, apps, CFG] = await Promise.all([api("/api/packs"), api("/api/applications"), api("/api/config")]); setServer(true); }
+  catch { setServer(false); return; }
   if (CFG.name) $("cfg-title").textContent = `${CFG.name}'s job hunt`;
   try { conn = await api("/api/connections/match", { companies: packs.map((p) => p.company) }); } catch { conn = {}; }
   render();
   loadNetwork();
 }
-load();
 setTimeout(async () => {
   if (ext) return;
   const r = await toExt({ type: "ping" }, 1500);
   setExt(!!r.ok, r.version);
 }, 300);
+load().then(async () => {
+  const s = await loadSetup();
+  if (!s.serverOk || (!s.allDone && !LOCAL)) showTab("setup");
+});
+
+
+// ---- setup (first run, and the hosted site) ----
+const REPO = "https://github.com/kuldeepsaini23/apply-kit";
+const PFIELDS = [
+  ["About you", [["fullName", "Full name"], ["email", "Email"], ["phone", "Phone (with country code)"], ["location", "Location (as you'd write it on a form)"], ["city", "City"], ["state", "State"], ["country", "Country"]]],
+  ["Links", [["linkedin", "LinkedIn URL"], ["github", "GitHub URL"], ["website", "Website or portfolio"], ["x", "X / Twitter URL"]]],
+  ["Work", [["company", "Current company"], ["title", "Current title"], ["years", "Years of experience", "number"], ["notice", "Notice period (text)"], ["noticeDays", "Notice period in days", "number"], ["startText", "When can you start"]]],
+  ["Pay", [["currentCTC", "Current pay (text, INR)"], ["currentCTCNum", "Current pay per year in ₹", "number"], ["expectedCTC", "Expected pay (text, INR)"], ["expectedCTCNum", "Expected pay per year in ₹", "number"], ["currentUSD", "Current pay (text, for USD forms)"], ["expectedUSD", "Expected pay (text, USD)"], ["expectedUSDNum", "Expected pay per year in $", "number"]]],
+  ["Eligibility", [["relocateText", "Open to relocating?"], ["workAuthText", "Work authorization"]]],
+  ["Education", [["school", "University"], ["degree", "Degree"], ["field", "Field of study"], ["gradYear", "Graduation year", "number"]]],
+];
+let setup = null, profile = {};
+
+function stepRow(ok, title, body, action = "") {
+  return `<div class="step"><span class="sdot ${ok === null ? "" : ok ? "ok" : "bad"}">${ok ? "✓" : ok === null ? "·" : "!"}</span>
+    <div class="grow"><b>${title}</b><div class="muted xs">${body}</div></div>${action}</div>`;
+}
+
+async function loadSetup() {
+  let serverOk = false;
+  try { setup = await api("/api/setup"); serverOk = true; } catch { setup = null; }
+  const steps = [
+    stepRow(ext, "Chrome extension", ext ? "Connected." : `Download the code from <a href="${REPO}" target="_blank">GitHub</a>, open <b>chrome://extensions</b>, turn on Developer mode, click <b>Load unpacked</b> and pick the folder. Then refresh this page.`),
+    stepRow(LOCAL || ext ? serverOk : null, "Apply Kit helper on your computer", serverOk ? "Running." : `Install <a href="https://bun.sh" target="_blank">Bun</a>, then in the folder run <code>cd server && bun install && bun server.ts</code> (on Windows, double-click <b>start-server.cmd</b>). Keep it running while you apply.`),
+    stepRow(serverOk ? setup.claudeInstalled : null, "Claude Code, logged in", serverOk && setup.claudeInstalled ? "Installed. Test the login once:" : `Install <a href="https://claude.com/claude-code" target="_blank">Claude Code</a> and run <code>claude</code> once to log in. It runs on your Claude plan; no API key.`,
+      serverOk && setup.claudeInstalled ? `<button class="btn sm" id="s-test">Test Claude</button>` : ""),
+    stepRow(serverOk ? setup.profile : null, "Your profile", setup?.profile ? "Saved." : "Fill it in below. Forms are filled from it."),
+    stepRow(serverOk ? setup.resume : null, "Resume", setup?.resume ? "Uploaded." : "Upload a PDF below."),
+    stepRow(serverOk ? setup.facts : null, "Facts for Claude", setup?.facts ? "Saved." : "Add your experience below so Claude can answer questions honestly."),
+  ];
+  $("steps").innerHTML = steps.join("");
+  $("s-forms").hidden = !serverOk;
+  const allDone = serverOk && ext && setup.profile && setup.resume && setup.facts;
+  $("setupdot").className = "dot " + (allDone ? "on" : "warn");
+  const t = $("s-test");
+  if (t) t.onclick = async () => {
+    t.disabled = true; t.textContent = "Asking Claude…";
+    try { const r = await api("/api/setup/test-claude", {}); t.textContent = /ok/i.test(r.reply) ? "Claude works" : "Odd reply: " + r.reply; }
+    catch (e) { t.textContent = "Not logged in: run claude once"; toast("Claude test failed", e.message); }
+  };
+  if (serverOk) await loadSetupForms();
+  return { serverOk, allDone };
+}
+
+async function loadSetupForms() {
+  const [p, f] = await Promise.all([api("/api/profile"), api("/api/facts")]);
+  profile = p.missing ? { answers: {} } : p;
+  $("p-note").textContent = p.missing ? "Not saved yet" : "";
+  $("pform").innerHTML = PFIELDS.map(([group, list]) => `<div class="sgroup">${esc(group)}</div>` + list.map(([k, label, type]) =>
+    `<label class="sfield"><span>${esc(label)}</span><input class="input" name="${k}" type="${type || "text"}" value="${esc(profile[k] ?? "")}"></label>`).join("")).join("");
+  $("f-text").value = f.text || "";
+  $("f-private").hidden = !f.privateContext;
+  $("r-state").textContent = setup.resume ? "A resume is uploaded. Pick a file to replace it." : "No resume yet.";
+  renderAnswerRows(Object.entries(profile.answers || {}));
+}
+
+$("p-save").onclick = async () => {
+  const next = { ...profile };
+  for (const el of $("pform").elements) if (el.name) next[el.name] = el.type === "number" ? (el.value === "" ? null : +el.value) : el.value.trim();
+  const [first, ...rest] = (next.fullName || "").split(/\s+/);
+  Object.assign(next, { firstName: first || "", lastName: rest.join(" "), yearsText: next.years != null ? String(next.years) : "" });
+  try { await api("/api/profile", next); profile = next; $("p-saved").textContent = "Saved. Reopen the side panel to use it."; loadSetup(); }
+  catch (e) { toast("Couldn't save", e.message); }
+};
+
+$("r-file").onchange = async (e) => {
+  const file = e.target.files[0]; if (!file) return;
+  const buf = new Uint8Array(await file.arrayBuffer());
+  let s = "";
+  for (let i = 0; i < buf.length; i += 0x8000) s += String.fromCharCode.apply(null, buf.subarray(i, i + 0x8000));
+  try {
+    await api("/api/resume", { b64: btoa(s) });
+    profile.resumeFileName = file.name;
+    await api("/api/profile", profile);
+    toast("Resume uploaded", file.name);
+    loadSetup();
+  } catch (err) { toast("Upload failed", err.message); }
+};
+
+$("f-save").onclick = async () => {
+  try { const r = await api("/api/facts", { text: $("f-text").value }); $("f-saved").textContent = `Saved (${r.chars} characters).`; loadSetup(); }
+  catch (e) { toast("Couldn't save", e.message); }
+};
+
+function renderAnswerRows(rows) {
+  $("a-rows").innerHTML = rows.map(([label, text]) => `<div class="arow"><input class="input" placeholder="Label" value="${esc(label)}"><textarea class="input" rows="2" placeholder="Answer">${esc(text)}</textarea><button class="btn ghost icon" title="Remove">✕</button></div>`).join("")
+    || '<div class="muted xs">No saved answers yet.</div>';
+}
+const answerRows = () => [...$("a-rows").querySelectorAll(".arow")].map((r) => [r.querySelector("input").value.trim(), r.querySelector("textarea").value.trim()]);
+$("a-rows").onclick = (e) => { if (e.target.closest("button")) { e.target.closest(".arow").remove(); } };
+$("a-add").onclick = () => renderAnswerRows([...answerRows(), ["", ""]]);
+$("a-save").onclick = async () => {
+  profile.answers = Object.fromEntries(answerRows().filter(([l, t]) => l && t));
+  try { await api("/api/profile", profile); $("a-saved").textContent = "Saved."; }
+  catch (e) { toast("Couldn't save", e.message); }
+};
 
 // ---- people, referrals, outreach ----
 const MY_EMAIL = () => CFG.email || "";
