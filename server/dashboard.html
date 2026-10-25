@@ -10,7 +10,7 @@
 <link rel="stylesheet" href="/ui.css">
 <script>try { const t = localStorage.getItem("ak-theme"); if (t) document.documentElement.dataset.theme = t; } catch {}</script>
 <style>
-  /* Shell (like the Koomerce admin): sidebar on the shell colour, the page on a white panel with a hairline. */
+  /* Shell: sidebar on the shell colour, the page on a white panel with a hairline. */
   html, body { background: var(--shell); }
   .app { display: grid; grid-template-columns: 236px minmax(0, 1fr); min-height: 100vh; }
   .side { position: sticky; top: 0; height: 100vh; display: flex; flex-direction: column; gap: 18px; padding: 14px 12px; }
@@ -39,7 +39,7 @@
   }
   .page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
   .page-head h1 { font-size: 26px; font-weight: 700; letter-spacing: -.025em; }
-  /* Setup steps on Home (Koomerce "Finish setup"): done ones sit back, the next one is outlined. */
+  /* Setup steps on Home: done ones sit back, the next one is outlined. */
   .steps6 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 20px; }
   .stepc { display: flex; gap: 12px; align-items: flex-start; padding: 14px; border-radius: 12px; background: var(--card); box-shadow: 0 0 0 1px var(--border), var(--surface-drop); cursor: pointer; text-align: left; border: 0; font: inherit; color: inherit; }
   .stepc:hover { box-shadow: 0 0 0 1px var(--ring), var(--surface-drop); }
