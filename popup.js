@@ -83,6 +83,10 @@ async function init() {
     $("answers").appendChild(row);
   }
 
+  // Must open inside the click (user gesture), so no await before it.
+  $("guided").onclick = () => { chrome.sidePanel.open({ tabId: tab.id }); window.close(); };
+  if (/ashbyhq\.com/.test(tab.url || "")) { $("guidedhint").hidden = false; $("guided").classList.add("brand"); }
+
   $("fill").onclick = async () => {
     $("result").textContent = "Filling…";
     try {

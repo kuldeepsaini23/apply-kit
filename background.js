@@ -10,6 +10,7 @@ chrome.commands.onCommand.addListener(async (command, tab) => {
 
 // Messages from the dashboard (via bridge.js on localhost:4777).
 chrome.runtime.onMessage.addListener((msg, sender, reply) => {
+  if (msg.type === "ak-focus") return false; // for the side panel
   (async () => {
     if (msg.type === "ping") return { ok: true, version: chrome.runtime.getManifest().version };
     if (msg.type === "openAndFill") {

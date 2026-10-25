@@ -192,6 +192,20 @@ function findPeople(b: any) {
 // tools/scan-boards.py writes data/jobs.json; auto mode finds people for the newest jobs, a few a day.
 const JOBS = join(DATA, "jobs.json");
 const AUTO = join(DATA, "auto.json");
+const SCORES = join(DATA, "job-scores.json");
+
+// Companies you already applied to: the dashboard log plus TRACKER.md next to your packs (if you keep one).
+const squash = (c: string) => String(c || "").replace(/\(.*?\)/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+function appliedCompanies(): Set<string> {
+  const names = new Set<string>((readJson(APPS, []) as any[]).map((a) => squash(a.company)));
+  const tracker = join(PACKS, "TRACKER.md");
+  if (existsSync(tracker)) for (const line of readFileSync(tracker, "utf8").split("\n")) {
+    const cells = line.split("|").map((c) => c.trim());
+    if (/^\d{4}-\d{2}-\d{2}/.test(cells[1] || "")) names.add(squash(cells[2]));
+  }
+  names.delete("");
+  return names;
+}
 const peopleCached = (company: string) => existsSync(join(PEOPLE, slug(company) + ".v2.json"));
 
 function readAuto() {
@@ -274,10 +288,34 @@ const routes: Record<string, (b: any) => Promise<any> | any> = {
   // Who to contact at a company and how: Claude research + company site + GitHub + optional verifier, cached per company.
   "POST /api/people": async (b) => ({ ...(await findPeople(b)), connections: connectionsAt(b.company) }),
 
-  "GET /api/jobs": () => ({
-    jobs: (readJson(JOBS, []) as any[]).map((j) => ({ ...j, people: peopleCached(j.company) ? readJson(join(PEOPLE, slug(j.company) + ".v2.json"), {}).people?.length ?? 0 : null })),
+  "GET /api/jobs": () => {
+    const scores = readJson(SCORES, {}) as Record<string, any>;
+    const applied = appliedCompanies();
+    return {
+    jobs: (readJson(JOBS, []) as any[]).map((j) => ({
+      ...j, fit: scores[j.url] ?? null, applied: applied.has(squash(j.company)),
+      people: peopleCached(j.company) ? readJson(join(PEOPLE, slug(j.company) + ".v2.json"), {}).people?.length ?? 0 : null,
+    })),
     scannedAt: existsSync(JOBS) ? statSync(JOBS).mtime.toISOString() : null,
-  }),
+  };
+  },
+  // Claude rates up to 40 unscored jobs per call from title, company and location (one call, no web).
+  "POST /api/jobs/score": async () => {
+    const scores = readJson(SCORES, {}) as Record<string, any>;
+    const applied = appliedCompanies();
+    const todo = (readJson(JOBS, []) as any[]).filter((j) => !scores[j.url] && !applied.has(squash(j.company))).slice(0, 40);
+    if (!todo.length) return { scored: 0, left: 0 };
+    const prompt = `# JOBS
+${todo.map((j, i) => `${i}. ${j.company}: ${j.title} (${j.location || "?"}${j.remote ? ", remote" : ""}; posted ${j.posted || "?"})`).join("\n")}
+
+Rate how likely I am to get an interview for each job, 0 to 100, using my profile and the rubric: stack match from the title, seniority (5+ years or staff/principal titles score low), whether someone in India can be hired for that location, and domain fit. Be strict; most jobs should land under 60.
+Return ONLY JSON: {"scores":[{"i":0,"fit":0,"why":"under 12 words"}]}`;
+    const { scores: got = [] } = json<any>(await claude(prompt));
+    for (const g of got) { const j = todo[g.i]; if (j && Number.isFinite(+g.fit)) scores[j.url] = { fit: Math.max(0, Math.min(100, Math.round(+g.fit))), why: String(g.why || "").slice(0, 120) }; }
+    writeFileSync(SCORES, JSON.stringify(scores, null, 1));
+    const left = (readJson(JOBS, []) as any[]).filter((j) => !scores[j.url] && !applied.has(squash(j.company))).length;
+    return { scored: got.length, left };
+  },
   "POST /api/jobs/scan": async () => {
     const proc = Bun.spawn(["python", "tools/scan-boards.py", JOBS], { cwd: join(DIR, ".."), stdout: "pipe", stderr: "pipe" });
     const timer = setTimeout(() => proc.kill(), 5 * 60 * 1000);

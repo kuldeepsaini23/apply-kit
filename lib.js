@@ -68,3 +68,22 @@ export function waitForLoad(tabId, timeout = 30000) {
     chrome.tabs.onUpdated.addListener(listener);
   });
 }
+
+// Guided mode: list every field with a suggested answer, without filling anything.
+export async function guidePage(tabId) {
+  const { currency = "INR" } = await chrome.storage.local.get("currency");
+  await inject(tabId);
+  const res = await inFrames(tabId, (cur) => globalThis.__applyKit.guide({ currency: cur }), [currency]);
+  return res.flatMap((r) => r.result || []);
+}
+
+export async function showField(tabId, id) {
+  await inFrames(tabId, (id) => globalThis.__applyKit?.showField(id), [id]);
+}
+
+// Attach the resume to one file input (works on forms that accept scripted files).
+export async function attachTo(tabId, id) {
+  const b64 = await resumeB64();
+  const res = await inFrames(tabId, (id, b64) => globalThis.__applyKit?.attach(id, b64), [id, b64]);
+  return res.some((r) => r.result);
+}

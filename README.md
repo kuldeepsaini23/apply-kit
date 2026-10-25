@@ -11,7 +11,8 @@ Built in October 2026 with Claude Code.
 - **Score**: a quick heuristic fit score (stack, experience, location, domain, freshness) in the popup, or a deeper **Claude score** with reasons, gaps and what to lead with.
 - **People & outreach**: Claude researches founders, hiring managers and recruiters from public sources, and drafts an email, LinkedIn or X message for each. "Open in Gmail" opens a prefilled compose window, so you send it yourself.
 - **Find HR** (dashboard Jobs tab and the popup): finds the people who hire at a company and their best contact, in this order: phone, email, LinkedIn, X. Free sources first: Claude web research (names, titles, profiles, and numbers or emails recruiters published in public hiring posts), the company's own website, public GitHub commit emails (to learn the company's email format), and the job page. Every contact shows where it came from and how sure it is: verified, published, likely or guessed. Optional free-tier keys: `hunter_api_key` (checks guessed emails, 50 a month free) and `github_token` (higher GitHub rate limit). Results are cached per company and a credit counter keeps you inside free allowances. Phone chips open a call or WhatsApp, emails open Gmail compose; you always send yourself.
-- **Jobs tab + auto mode**: runs the board scanner from the dashboard and lists the jobs. Auto mode (off by default) finds people for the newest jobs in the background, up to a daily cap.
+- **Guided mode** (side panel): for forms that ignore or flag scripted filling (Ashby). Lists every field with its suggested answer, lets Claude answer the blanks, and gives each a Copy button; it outlines the field on the page, follows the field you click into, and tracks what's done. It fills nothing.
+- **Jobs tab + auto mode**: runs the board scanner from the dashboard and lists the jobs, ranked by a Claude fit score (one call rates 40 jobs from title, company and location). Companies you already applied to (dashboard log or a `TRACKER.md` beside your packs) are hidden. Auto mode (off by default) finds people for the newest jobs in the background, up to a daily cap.
 - **Referrals**: import LinkedIn's `Connections.csv` and see who you know at each company, with a drafted referral ask.
 - **Dashboard** (`localhost:4777`): your pipeline of prepared applications, an applications funnel (applied, replied, interview, offer) with reply rate per channel, and an outreach log.
 - **RAG over your own notes**: point `docs` in `server/config.json` at your markdown notes (project write-ups, past achievements). Every Claude call retrieves the most relevant facts with hybrid search and adds them to the prompt, so answers use the right details instead of one fixed profile.
@@ -54,13 +55,11 @@ Optional: put prepared application notes as markdown files in `packs/` (or set `
 
 ## Known limits
 
-- Some ATS forms (notably Ashby) flag automated filling and submission as spam and ignore values set from scripts. For those, fill by hand from the answers Claude drafts. A guided manual mode is on the roadmap.
+- Some ATS forms (notably Ashby) flag automated filling and submission as spam and ignore values set from scripts. Use Guided mode there.
 - The heuristic score is a rough guide; use the Claude score for decisions.
 
 ## Roadmap
 
-- Guided manual mode: a side panel listing every field with its answer and a Copy button.
-- Daily job feed from the board scanner into the dashboard, scored by Claude.
 - Gmail OAuth to create drafts with the resume attached and detect replies.
 
 ## License

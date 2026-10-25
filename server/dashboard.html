@@ -174,19 +174,23 @@
         <h1>Jobs</h1>
         <p>Live roles from the board scanner. <b>Find HR</b> finds the people who hire there and their best contact: phone, then email, then LinkedIn. Nothing is ever sent.</p>
       </div>
-      <button class="btn brand" id="j-scan"><svg class="i"><use href="#i-refresh"/></svg>Scan now</button>
+      <div class="row" style="gap:6px">
+        <button class="btn ai" id="j-score"><svg class="i"><use href="#i-spark"/></svg>Claude score</button>
+        <button class="btn brand" id="j-scan"><svg class="i"><use href="#i-refresh"/></svg>Scan now</button>
+      </div>
     </div>
     <div class="card row" style="flex-wrap:wrap;gap:12px;margin-bottom:12px">
       <label class="row" style="gap:8px"><input type="checkbox" id="j-auto"> <b>Auto find HR</b></label>
       <span class="muted xs">for the newest jobs, up to</span>
       <input class="input" id="j-perday" type="number" min="1" max="50" style="width:70px;height:30px">
       <span class="muted xs">companies a day (each uses about a minute of your Claude plan)</span>
+      <label class="row" style="gap:6px"><input type="checkbox" id="j-hide" checked> <span class="xs">hide applied</span></label>
       <span class="grow"></span>
       <span class="muted xs" id="j-meta"></span>
     </div>
     <div class="card" style="padding:6px;overflow-x:auto">
       <table>
-        <thead><tr><th>Company</th><th>Role</th><th class="hide-sm">Location</th><th>Posted</th><th>People</th></tr></thead>
+        <thead><tr><th>Fit</th><th>Company</th><th>Role</th><th class="hide-sm">Location</th><th>Posted</th><th>People</th></tr></thead>
         <tbody id="jobs"></tbody>
       </table>
     </div>
@@ -700,20 +704,25 @@ let jobs = [];
 async function loadJobs() {
   try {
     const [r, a] = await Promise.all([api("/api/jobs"), api("/api/auto")]);
-    jobs = r.jobs.slice().sort((x, y) => String(y.posted).localeCompare(String(x.posted)));
+    // Best fit first; unscored jobs by date after them. Already-applied companies hidden unless you ask.
+    jobs = r.jobs.filter((j) => !(j.applied && $("j-hide").checked))
+      .sort((x, y) => (y.fit?.fit ?? -1) - (x.fit?.fit ?? -1) || String(y.posted).localeCompare(String(x.posted)));
     $("c-jobs").textContent = jobs.length;
+    const unscored = r.jobs.filter((j) => !j.fit && !j.applied).length;
+    $("j-score").innerHTML = `${ic("spark")}${unscored ? `Claude score (${unscored} new)` : "All scored"}`;
     $("j-meta").textContent = (r.scannedAt ? `Scanned ${new Date(r.scannedAt).toLocaleString()}` : "Not scanned yet") + ` · auto found ${a.doneToday}/${a.perDay} today${a.running ? " (running)" : ""}`;
     $("j-auto").checked = a.enabled;
     $("j-perday").value = a.perDay;
     $("jobs").innerHTML = jobs.map((j, i) => `
       <tr>
-        <td><b>${esc(j.company)}</b></td>
+        <td>${j.fit ? `<span class="badge ${j.fit.fit >= 70 ? "ok" : j.fit.fit >= 50 ? "warn" : "bad"}" title="${esc(j.fit.why)}">${j.fit.fit}</span>` : '<span class="muted xs">–</span>'}</td>
+        <td><b>${esc(j.company)}</b>${j.applied ? ' <span class="badge">applied</span>' : ""}${j.fit?.why ? `<div class="muted xs">${esc(j.fit.why)}</div>` : ""}</td>
         <td><a href="${esc(j.url)}" target="_blank">${esc(j.title)}</a></td>
         <td class="hide-sm muted xs">${esc(j.location)}</td>
         <td class="muted xs">${esc(j.posted)}</td>
         <td>${j.people === null ? `<button class="btn sm brand" data-j="${i}">${ic("users")}Find HR</button>` : `<button class="btn sm" data-j="${i}">${ic("users")}${j.people} found</button>`}</td>
-      </tr>`).join("") || `<tr><td colspan="5"><div class="empty">${ic("refresh")}No jobs yet. Hit Scan now.</div></td></tr>`;
-  } catch (e) { $("jobs").innerHTML = `<tr><td colspan="5" class="muted xs">Couldn't load jobs: ${esc(e.message)}</td></tr>`; }
+      </tr>`).join("") || `<tr><td colspan="6"><div class="empty">${ic("refresh")}No jobs yet. Hit Scan now.</div></td></tr>`;
+  } catch (e) { $("jobs").innerHTML = `<tr><td colspan="6" class="muted xs">Couldn't load jobs: ${esc(e.message)}</td></tr>`; }
 }
 $("jobs").addEventListener("click", (e) => {
   const b = e.target.closest("button[data-j]"); if (!b) return;
@@ -736,6 +745,15 @@ $("j-scan").onclick = async () => {
   $("j-scan").disabled = false;
   loadJobs();
 };
+$("j-score").onclick = async () => {
+  $("j-score").disabled = true;
+  $("j-score").textContent = "Claude is scoring…";
+  try { const r = await api("/api/jobs/score", {}); toast(r.scored ? `Scored ${r.scored} jobs${r.left ? `, ${r.left} left: press again` : ""}` : "Nothing new to score"); }
+  catch (e) { toast("Scoring failed: " + e.message); }
+  $("j-score").disabled = false;
+  loadJobs();
+};
+$("j-hide").onchange = loadJobs;
 const saveAuto = async () => { await api("/api/auto", { enabled: $("j-auto").checked, perDay: +$("j-perday").value || 10 }); loadJobs(); };
 $("j-auto").onchange = saveAuto;
 $("j-perday").onchange = saveAuto;

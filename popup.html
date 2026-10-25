@@ -53,6 +53,8 @@
   <div class="card">
     <button class="btn lg block" id="fill"><svg class="i"><use href="#i-pen"/></svg>Fill this form<span class="kbd" style="margin-left:auto">Alt+Shift+F</span></button>
     <button class="btn brand lg block" id="aifill" style="margin-top:8px"><svg class="i"><use href="#i-spark"/></svg>Fill + Claude answers<span class="kbd" style="margin-left:auto">Alt+Shift+A</span></button>
+    <button class="btn sm block" id="guided" style="margin-top:8px"><svg class="i"><use href="#i-grid"/></svg>Guided mode: copy each answer yourself</button>
+    <div class="muted xs" id="guidedhint" hidden style="margin-top:6px">Ashby ignores or flags scripted filling. Use Guided mode here.</div>
     <div class="legend"><span><i style="background:#22c55e"></i>filled</span><span><i style="background:#f59e0b"></i>check</span><span><i style="background:#a855f7"></i>Claude</span><span style="margin-left:auto">never submits</span></div>
     <div id="result"></div>
   </div>

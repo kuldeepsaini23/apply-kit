@@ -256,12 +256,14 @@
     return { filled, check, controls: all.length };
   }
 
+  // Gives a control a stable id (unique across frames) that the popup, panel and server refer to.
+  const tag = (el) => (el.dataset.applykitId ||= (globalThis.__akPrefix ||= "f" + Math.random().toString(36).slice(2, 6)) + "_" + (globalThis.__akN = (globalThis.__akN || 0) + 1));
+
   // Empty questions left after fill(), for Claude to answer. Tags each with data-applykit-id.
   function collectOpen() {
     const out = [];
     const P = globalThis.APPLY_PROFILE;
     const list = rules(P, false);
-    let n = 0;
     for (const el of document.querySelectorAll("textarea, input[type=text], input:not([type])")) {
       if (el.disabled || el.readOnly || !visible(el) || norm(el.value)) continue;
       if (el.getAttribute("role") === "combobox" || el.getAttribute("aria-autocomplete")) continue;
@@ -272,8 +274,7 @@
       const required = el.required || el.getAttribute("aria-required") === "true" || /[*✱]/.test(label);
       if (rule && !rule.flag) continue;
       if (!(el.tagName === "TEXTAREA" || required || rule)) continue;
-      const id = el.dataset.applykitId || (globalThis.__akPrefix ||= "f" + Math.random().toString(36).slice(2, 6)) + "_" + n++;
-      el.dataset.applykitId = id;
+      const id = tag(el);
       const max = +el.getAttribute("maxlength") || null;
       out.push({ id, question: label.replace(/\s*[*✱]\s*$/, ""), kind: el.tagName === "TEXTAREA" ? "long text" : "short text", maxLength: max && max > 0 ? max : null });
     }
@@ -291,6 +292,86 @@
     }
     if (done) toast(`Apply Kit: Claude answered ${done} question(s) (purple). Read and edit them before submitting.`);
     return done;
+  }
+
+  // Guided mode: every field on the form with a suggested answer, filling nothing.
+  // For ATS forms (Ashby) that ignore or flag values set from scripts; the user pastes each answer.
+  function guide({ currency = "INR", profile } = {}) {
+    const P = profile || globalThis.APPLY_PROFILE;
+    const list = rules(P, currency === "USD");
+    const out = [];
+    const seen = new Set();
+    for (const el of document.querySelectorAll(CONTROLS)) {
+      if (el.disabled || (!visible(el) && el.type !== "file" && el.type !== "radio" && el.type !== "checkbox")) continue;
+      let q, options = null, current = "";
+      if (el.type === "radio" || el.type === "checkbox") {
+        if (!el.name || seen.has(el.name)) continue;
+        seen.add(el.name);
+        const group = [...document.getElementsByName(el.name)].filter((r) => r.type === el.type);
+        q = groupQuestion(group);
+        if (el.type === "checkbox" && group.length === 1) q = optionText(el).toLowerCase() || q;
+        options = group.map(optionText).filter(Boolean);
+        current = group.filter((r) => r.checked).map(optionText).join(", ");
+      } else {
+        q = questionFor(el);
+        if (el.tagName === "SELECT") {
+          options = [...el.options].map((o) => norm(o.text)).filter((t) => t && !/^(select|choose|--|please)/i.test(t));
+          current = el.selectedIndex > 0 ? norm(el.options[el.selectedIndex].text) : "";
+        } else if (el.type !== "file") current = el.value || "";
+      }
+      const label = q.split(" | ")[0].replace(/\s*[*✱]\s*$/, "") || q;
+      if (!label || (el.type === "file" && /autofill|parse/.test(q))) continue;
+      const required = el.required || el.getAttribute("aria-required") === "true" || /[*✱]/.test(q.split(" | ")[0]);
+      const sensitive = SKIP.test(q);
+      const rule = sensitive ? null : matchRule(q, list);
+      let answer = "";
+      if (el.type === "file") answer = /resume|\bcv\b|curriculum/.test(q) && !/cover|autofill|parse/.test(q) ? P.resumeFileName : "";
+      else if (rule && !rule.flag) {
+        if (options) {
+          const want = rule.auth ? ((a) => a && new RegExp("^" + a, "i"))(authAnswer(q)) : rule.choice;
+          answer = (want ? options.find((o) => want.test(o)) : options.find((o) => o.toLowerCase() === (rule.text || "").toLowerCase())) || "";
+        } else if (el.type === "number" && rule.num != null) answer = String(rule.num);
+        else if (el.type === "date" && rule.date) answer = rule.date;
+        else answer = rule.text || "";
+      }
+      out.push({
+        id: tag(el), question: label, required, current, answer, options,
+        kind: el.type === "file" ? "file" : options ? (el.type === "checkbox" ? "checkbox" : "choice") : el.tagName === "TEXTAREA" ? "long text" : "short text",
+        source: answer ? "profile" : "", check: !!(rule && (rule.check || rule.flag)), sensitive,
+        maxLength: +el.getAttribute("maxlength") > 0 ? +el.getAttribute("maxlength") : null,
+      });
+    }
+    // Tell the side panel which field has focus, so it can highlight that row.
+    if (!globalThis.__akFocus) {
+      globalThis.__akFocus = true;
+      document.addEventListener("focusin", (e) => {
+        const t = e.target;
+        const el = t.closest?.("[data-applykit-id]") || (t.name && document.querySelector(`[name="${CSS.escape(t.name)}"][data-applykit-id]`));
+        if (el) chrome.runtime.sendMessage({ type: "ak-focus", id: el.dataset.applykitId }).catch(() => {});
+      }, true);
+    }
+    return out;
+  }
+
+  function attach(id, b64) {
+    const el = document.querySelector(`[data-applykit-id="${id}"]`);
+    if (!el || el.type !== "file") return false;
+    attachResume(el, b64, globalThis.APPLY_PROFILE.resumeFileName);
+    return true;
+  }
+
+  // Scroll a field into view and outline it in blue. Returns false if this frame doesn't have it.
+  function showField(id) {
+    const el = document.querySelector(`[data-applykit-id="${id}"]`);
+    if (!el) return false;
+    document.querySelectorAll("[data-applykit-on]").forEach((n) => { n.style.outline = ""; n.removeAttribute("data-applykit-on"); });
+    const box = visible(el) ? el : el.parentElement || el;
+    box.scrollIntoView({ block: "center", behavior: "smooth" });
+    box.style.outline = "3px solid #3b82f6";
+    box.style.outlineOffset = "2px";
+    box.setAttribute("data-applykit-on", "");
+    if (visible(el) && el.type !== "file") el.focus({ preventScroll: true });
+    return true;
   }
 
   // Rough interview-chance score from the job description text.
@@ -390,5 +471,5 @@
     return BOARD.test(location.hostname) ? "" : location.hostname.replace(/^(www|jobs|careers|apply)\./, "");
   }
 
-  globalThis.__applyKit = { fill, score, pageInfo, collectOpen, applyAnswers };
+  globalThis.__applyKit = { fill, score, pageInfo, collectOpen, applyAnswers, guide, showField, attach };
 })();
