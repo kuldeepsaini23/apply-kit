@@ -392,7 +392,7 @@ function toast(title, body = "", ms = 6000) {
 // Served by your local helper: call it directly. Hosted (Vercel): go through the extension,
 // which forwards to the helper on localhost, so your data never touches the hosting server.
 const LOCAL = location.protocol === "http:" && /^(localhost|127\.0\.0\.1)$/.test(location.hostname);
-let extReady;
+let extReady, extSettled = false;
 const extKnown = new Promise((r) => (extReady = r));
 async function api(path, body) {
   if (!LOCAL) {
@@ -423,8 +423,12 @@ function toExt(msg, timeout = 180000) {
   });
 }
 function setExt(on, v) {
+  // Hosted: the extension can connect after the first data load already failed, so load again.
+  const late = on && !ext && !LOCAL && extSettled;
   ext = on;
+  extSettled = true;
   extReady();
+  if (late) load().then(loadSetup);
   $("extdot").classList.toggle("on", on);
   $("exttext").textContent = on ? `Extension v${v}` : "Extension off";
   $("extbadge").title = on ? "Chrome extension connected" : "Load the extension in chrome://extensions, then refresh";
@@ -626,7 +630,7 @@ async function load() {
 }
 setTimeout(async () => {
   if (ext) return;
-  const r = await toExt({ type: "ping" }, 1500);
+  const r = await toExt({ type: "ping" }, 4000); // the extension's service worker may be waking up
   setExt(!!r.ok, r.version);
 }, 300);
 load().then(async () => {
