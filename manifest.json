@@ -1,8 +1,8 @@
 {
   "manifest_version": 3,
   "name": "Apply Kit",
-  "version": "1.2.0",
-  "description": "Fills job application forms from my profile, attaches my resume, scores the job and logs applications. Never submits.",
+  "version": "1.3.0",
+  "description": "Side panel that fills job application forms from your profile, lists every question with an answer to copy, scores the job and finds people to contact. Never submits.",
   "permissions": [
     "activeTab",
     "scripting",
@@ -17,7 +17,6 @@
     "type": "module"
   },
   "action": {
-    "default_popup": "popup.html",
     "default_title": "Apply Kit"
   },
   "commands": {

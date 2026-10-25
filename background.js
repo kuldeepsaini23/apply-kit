@@ -1,5 +1,8 @@
 import { runFill, aiFill, waitForLoad, api } from "./lib.js";
 
+// Clicking the toolbar icon opens the side panel (the whole UI lives there).
+chrome.sidePanel.setPanelBehavior({ openPanelOnActionClick: true }).catch(() => {});
+
 chrome.commands.onCommand.addListener(async (command, tab) => {
   if (!tab?.id) return;
   try {

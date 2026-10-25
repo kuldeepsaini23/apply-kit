@@ -35,7 +35,7 @@ globalThis.APPLY_PROFILE = {
   field: "Computer Science",
   gradYear: 2024,
   resumeFileName: "Alex_Doe_Resume.pdf",
-  // Shown in the popup with one-click Copy buttons.
+  // Shown in the side panel (Job tab) with one-click Copy buttons.
   answers: {
     "Intro (2 lines)": "Full-stack engineer at Acme building on TypeScript, Next.js and Postgres. I own features end to end and ship fast.",
     "Why are you looking": "I've learned a lot owning a platform end to end and want harder product problems with a stronger team.",

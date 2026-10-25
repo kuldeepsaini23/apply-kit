@@ -1,0 +1,192 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=DM+Sans:opsz,wght@9..40,400..700&display=swap">
+<link rel="stylesheet" href="../ui.css">
+<style>
+  body { font-size: 13px; min-width: 300px; }
+  .top { position: sticky; top: 0; z-index: 5; background: var(--background); padding: 12px 12px 0; border-bottom: 1px solid var(--border); }
+  .head { display: flex; align-items: center; gap: 8px; }
+  .seg { display: inline-flex; padding: 2px; border-radius: 9px; background: var(--muted); border: 1px solid var(--border); }
+  .seg button { height: 22px; padding: 0 8px; border: 0; background: none; border-radius: 7px; font: 500 11.5px var(--font-sans); color: var(--muted-foreground); cursor: pointer; }
+  .seg button.on { background: var(--card); color: var(--foreground); box-shadow: 0 1px 2px rgb(0 0 0 / .12); }
+  .page { display: flex; align-items: center; gap: 10px; margin: 10px 0; }
+  .page .who { min-width: 0; flex: 1; }
+  .page .co { font: 700 15px/1.2 var(--font-display); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .page .ro { color: var(--muted-foreground); font-size: 12px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fit { font: 700 22px/1 var(--font-display); font-variant-numeric: tabular-nums; text-align: right; }
+  .fit small { display: block; font: 500 10px var(--font-sans); color: var(--muted-foreground); text-transform: uppercase; letter-spacing: .06em; }
+  .tabs { display: flex; gap: 2px; }
+  .tabs button { flex: 1; height: 34px; border: 0; background: none; border-bottom: 2px solid transparent; font: 600 12.5px var(--font-sans); color: var(--muted-foreground); cursor: pointer; }
+  .tabs button.on { color: var(--foreground); border-bottom-color: var(--primary); }
+  main { padding: 12px; }
+  .card { padding: 12px; margin-bottom: 10px; border-radius: 14px; }
+  .sec { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--muted-foreground); margin-bottom: 8px; }
+  .note { padding: 10px 12px; border-radius: 12px; margin-bottom: 10px; font-size: 12.5px; line-height: 1.45; }
+  .note.warn { background: var(--warn-soft); color: var(--warn-ink); }
+  .note.off { background: var(--danger-soft); color: var(--danger); }
+  .msg { margin-top: 8px; font-size: 12px; white-space: pre-line; color: var(--muted-foreground); }
+  .msg:empty { display: none; }
+  .progress { height: 6px; }
+  .prog-row { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--muted-foreground); margin: 2px 0 10px; }
+  .prog-row .progress { flex: 1; }
+  /* Field list */
+  .f { padding: 10px 12px; margin-bottom: 8px; border-radius: 12px; border: 1px solid var(--border); background: var(--card); scroll-margin-top: 150px; }
+  .f.on { border-color: #3b82f6; box-shadow: 0 0 0 2px rgb(59 130 246 / .25); }
+  .f.done { background: var(--muted); }
+  .f.done .q { color: var(--muted-foreground); }
+  .f.done .q::before { content: "✓ "; color: var(--success-ink); }
+  .q { font-weight: 600; line-height: 1.35; cursor: pointer; }
+  .q .req { color: var(--danger); }
+  .meta { display: flex; flex-wrap: wrap; gap: 4px; margin: 6px 0; }
+  .opts { font-size: 11.5px; color: var(--muted-foreground); margin: 4px 0 6px; }
+  .opts b { color: var(--foreground); }
+  textarea.input { width: 100%; min-height: 34px; font-size: 12.5px; resize: vertical; field-sizing: content; max-height: 260px; }
+  .acts { display: flex; gap: 6px; margin-top: 6px; }
+  .empty { padding: 28px 8px; text-align: center; color: var(--muted-foreground); line-height: 1.5; }
+  .done-fold { margin: 12px 0 4px; font-size: 12px; color: var(--muted-foreground); cursor: pointer; user-select: none; }
+  .foot { position: sticky; bottom: 0; padding: 10px 12px 12px; background: var(--background); border-top: 1px solid var(--border); }
+  /* Job tab */
+  .bar { display: grid; grid-template-columns: 74px 1fr 38px; gap: 8px; align-items: center; font-size: 12px; margin-top: 5px; }
+  .bar .progress { height: 6px; }
+  .tags { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 10px; }
+  .ans { display: flex; justify-content: space-between; gap: 8px; align-items: center; padding: 7px 0; border-top: 1px solid var(--border); }
+  .ans:first-child { border-top: 0; padding-top: 0; }
+  textarea.out { min-height: 200px; font-size: 12px; margin-top: 8px; }
+  /* People */
+  .hrp { padding: 9px 0; border-top: 1px solid var(--border); }
+  .hrp:first-child { border-top: 0; padding-top: 0; }
+  .hrp .t { color: var(--muted-foreground); }
+  .hrc { display: flex; flex-wrap: wrap; gap: 4px; margin-top: 5px; }
+  .hrc a { display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 8px; border: 1px solid var(--border); border-radius: 7px; background: var(--muted); color: var(--foreground); text-decoration: none; font-size: 12px; }
+  .hrc a i { font-style: normal; font-size: 10.5px; color: var(--muted-foreground); }
+  [hidden] { display: none !important; }
+</style>
+</head>
+<body>
+  <svg width="0" height="0" style="position:absolute">
+    <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7z"/></symbol>
+    <symbol id="i-pen" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
+    <symbol id="i-target" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></symbol>
+    <symbol id="i-send" viewBox="0 0 24 24"><path d="M22 2 11 13"/><path d="M22 2 15 22l-4-9-9-4z"/></symbol>
+    <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+    <symbol id="i-grid" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+    <symbol id="i-refresh" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></symbol>
+  </svg>
+
+  <div class="top">
+    <div class="head">
+      <div class="logo key-brand">AK</div>
+      <span class="display" style="font-weight:700;font-size:15px">Apply Kit</span>
+      <span class="badge" id="srvbadge"><span class="dot" id="srv"></span><span id="srvtext">Claude</span></span>
+      <span class="grow"></span>
+      <div class="seg" title="Salary answers in"><button id="inr">₹</button><button id="usd">$</button></div>
+      <button class="btn sm ghost icon" id="rescan" title="Read this page again"><svg class="i"><use href="#i-refresh"/></svg></button>
+      <a class="btn sm ghost icon" href="http://localhost:4777" target="_blank" title="Open dashboard"><svg class="i"><use href="#i-grid"/></svg></a>
+    </div>
+    <div class="page">
+      <div class="who"><div class="co" id="co">–</div><div class="ro" id="ro">Open a job or application page</div></div>
+      <div class="fit" id="fitbox" hidden><span id="fit">–</span><small>fit</small></div>
+    </div>
+    <div class="tabs" role="tablist">
+      <button class="on" data-tab="apply">Apply <span class="muted" id="t-apply"></span></button>
+      <button data-tab="job">Job</button>
+      <button data-tab="people">People</button>
+    </div>
+  </div>
+
+  <div class="note off" id="srvhelp" hidden style="margin:12px 12px 0">Claude is off, so Claude answers, scores and people search won't work. Double-click <b>start-server.cmd</b> in the extension folder.</div>
+
+  <!-- APPLY -->
+  <section id="tab-apply">
+    <main>
+      <div class="note warn" id="ashby" hidden><b>Ashby form.</b> Ashby ignores or flags auto-fill, so copy each answer below and paste it into the field outlined in blue.</div>
+      <div id="autofill" class="row" style="gap:6px;margin-bottom:10px" hidden>
+        <button class="btn grow" id="fill"><svg class="i"><use href="#i-pen"/></svg>Fill form</button>
+        <button class="btn brand grow" id="aifill"><svg class="i"><use href="#i-spark"/></svg>Fill + Claude</button>
+      </div>
+      <div class="msg" id="fillmsg" style="margin:-4px 0 10px"></div>
+      <div id="formtools" hidden>
+        <div class="prog-row"><div class="progress"><b id="prog" style="width:0%"></b></div><span id="count"></span></div>
+        <div class="row" style="gap:6px;margin-bottom:10px">
+          <button class="btn ai sm grow" id="claude"><svg class="i"><use href="#i-spark"/></svg>Claude: answer blanks</button>
+          <button class="btn sm" id="next">Next field</button>
+        </div>
+      </div>
+      <div id="list"><div class="empty">Open an application form.<br>Its questions show up here with your answers.</div></div>
+      <div class="done-fold" id="donefold" hidden></div>
+      <div id="donelist" hidden></div>
+    </main>
+    <div class="foot">
+      <button class="btn brand block" id="log"><svg class="i"><use href="#i-check"/></svg><span>I submitted it: mark applied</span></button>
+      <div class="muted xs" id="logcount" style="margin-top:6px;text-align:center"></div>
+    </div>
+  </section>
+
+  <!-- JOB -->
+  <section id="tab-job" hidden>
+    <main>
+      <div class="card">
+        <div class="sec">Interview chance</div>
+        <div id="bars"></div>
+        <div class="tags" id="tags"></div>
+        <div class="muted xs" id="scorenote" style="margin-top:8px">Quick estimate from the page text. Works best on the job description.</div>
+        <div class="row" style="margin-top:10px;gap:6px">
+          <button class="btn ai sm grow" id="aiscorebtn"><svg class="i"><use href="#i-target"/></svg>Claude score</button>
+          <button class="btn ai sm grow" id="dmbtn"><svg class="i"><use href="#i-send"/></svg>Write DM + email</button>
+        </div>
+        <div class="msg" id="aiscore"></div>
+        <textarea class="input out" id="dmout" hidden></textarea>
+      </div>
+      <div class="card">
+        <div class="sec">Saved answers · click to copy</div>
+        <div id="answers"></div>
+      </div>
+      <div class="card">
+        <div class="sec">Applied log</div>
+        <div class="row" style="gap:6px"><input class="input" id="company" placeholder="Company" style="height:30px"><input class="input" id="role" placeholder="Role" style="height:30px"></div>
+        <div class="row" style="gap:6px;margin-top:8px">
+          <button class="btn sm grow" id="copylog">Copy tracker rows</button>
+          <button class="btn sm ghost" id="clear" title="Clear the local log">Clear</button>
+        </div>
+      </div>
+    </main>
+  </section>
+
+  <!-- PEOPLE -->
+  <section id="tab-people" hidden>
+    <main>
+      <div class="card">
+        <div class="sec">People who hire here</div>
+        <p class="muted xs" style="margin:0 0 10px">Founders, hiring managers and recruiters with their best contact. Nothing is ever sent for you.</p>
+        <button class="btn brand block" id="findhr"><svg class="i"><use href="#i-target"/></svg>Find HR</button>
+        <div id="hr" style="margin-top:10px"></div>
+      </div>
+    </main>
+  </section>
+
+  <script>
+const FIELDS=[
+ {id:"a1",question:"Name",required:true,current:"Kuldeep Saini",answer:"Kuldeep Saini",options:null,kind:"short text",source:"profile",check:false,sensitive:false,maxLength:null},
+ {id:"a2",question:"Email",required:true,current:"",answer:"you@example.com",options:null,kind:"short text",source:"profile",check:false,sensitive:false,maxLength:null},
+ {id:"a3",question:"Resume",required:true,current:"",answer:"Resume.pdf",options:null,kind:"file",source:"profile",check:false,sensitive:false,maxLength:null},
+ {id:"a4",question:"Notice period",required:true,current:"",answer:"About 15 days (no formal notice period)",options:null,kind:"short text",source:"profile",check:false,sensitive:false,maxLength:null},
+ {id:"a5",question:"Are you open to relocating to Bengaluru?",required:true,current:"",answer:"Yes",options:["Yes","No"],kind:"choice",source:"profile",check:false,sensitive:false,maxLength:null},
+ {id:"a6",question:"Why do you want to work at Sarvam?",required:true,current:"",answer:"",options:null,kind:"long text",source:"",check:false,sensitive:false,maxLength:null},
+ {id:"a7",question:"Expected CTC",required:false,current:"",answer:"₹20–25 LPA, negotiable for the right role",options:null,kind:"short text",source:"profile",check:true,sensitive:false,maxLength:null},
+ {id:"a8",question:"Gender",required:false,current:"",answer:"",options:["Male","Female","Prefer not to say"],kind:"choice",source:"",check:false,sensitive:true,maxLength:null}];
+const store={};
+globalThis.chrome={
+ storage:{local:{get:async k=>typeof k==="string"?{[k]:store[k]}:{},set:async o=>Object.assign(store,o)}},
+ tabs:{query:async()=>[{id:1,url:"https://jobs.ashbyhq.com/sarvam/x/application"}],onActivated:{addListener(){}},onUpdated:{addListener(){}}},
+ runtime:{onMessage:{addListener(){}},getURL:x=>x},
+ scripting:{executeScript:async({func,files})=>{ if(files) return [{frameId:0}]; const src=String(func);
+   if(src.includes("guide")) return [{frameId:0,result:FIELDS}];
+   if(src.includes("pageInfo")) return [{frameId:0,result:{company:"Sarvam",role:"Agent Engineer",url:"https://jobs.ashbyhq.com/sarvam/x",text:"x".repeat(500),domain:"sarvam.ai"}}];
+   if(src.includes("score")) return [{frameId:0,result:{total:72,parts:{stack:28,exp:20,loc:15,domain:13,fresh:9},hits:["TypeScript","LLM/AI","Node/Bun"],gaps:["Python"],chars:5000}}];
+   return [{frameId:0,result:null}]; }}};
+</script><script src="../profile.example.js"></script>
+  <script type="module" src="../panel.js"></script>
+<script type="module">setTimeout(()=>{ if(location.hash==="#job") document.querySelector('[data-tab="job"]').click(); },300)</script></body>
+</html>

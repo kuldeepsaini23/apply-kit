@@ -1,4 +1,4 @@
-// Shared by the popup, the keyboard shortcuts and the dashboard bridge.
+// Shared by the side panel, the keyboard shortcuts and the dashboard bridge.
 export const SERVER = "http://localhost:4777";
 
 export async function api(path, body) {

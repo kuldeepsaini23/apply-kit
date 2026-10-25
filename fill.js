@@ -256,7 +256,7 @@
     return { filled, check, controls: all.length };
   }
 
-  // Gives a control a stable id (unique across frames) that the popup, panel and server refer to.
+  // Gives a control a stable id (unique across frames) that the side panel and server refer to.
   const tag = (el) => (el.dataset.applykitId ||= (globalThis.__akPrefix ||= "f" + Math.random().toString(36).slice(2, 6)) + "_" + (globalThis.__akN = (globalThis.__akN || 0) + 1));
 
   // Empty questions left after fill(), for Claude to answer. Tags each with data-applykit-id.
