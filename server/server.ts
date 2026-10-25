@@ -112,7 +112,9 @@ const ragReady = (async () => {
 async function retrieved(query: string, k = 8) {
   await ragReady;
   if (!rag || !query.trim()) return "";
-  const hits = await rag.search(query.slice(0, 2000), k, "hybrid");
+  // ApplyKit.exe ships without the embedding model, so it searches your notes by keywords only.
+  const q = query.slice(0, 2000);
+  const hits = await rag.search(q, k, "hybrid").catch(() => rag!.search(q, k, "bm25"));
   return `\n# RELEVANT FACTS FROM MY NOTES (retrieved; background only: use them when they fit, never contradict the HARD RULES, never mention incidents framed as mistakes)\n${asContext(hits)}`;
 }
 
