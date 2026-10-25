@@ -42,6 +42,10 @@ cd server && bun install && cd ..                    # local embedding model for
 1. Chrome → `chrome://extensions` → Developer mode → **Load unpacked** → this folder.
 2. Start the server: `bun server/server.ts` (Windows: double-click `start-server.cmd`). The dashboard opens at http://localhost:4777.
 
+### Windows app
+
+`ApplyKit.exe` is the same server built into one file (`cd server && bun build-exe.ts`), so users need neither Bun nor a terminal. It runs in the background with an icon by the clock: click it for the dashboard, right-click for the hosted site, the log, Start with Windows, Restart and Quit. It keeps its data in a `data` folder next to the exe, and starting it again replaces a copy that is already running. Claude Code still has to be installed and logged in. The optional notes search (RAG) is left out of the exe.
+
 Optional: put prepared application notes as markdown files in `packs/` (or set `APPLYKIT_PACKS`) and they show up in the dashboard pipeline.
 
 ## How it's built

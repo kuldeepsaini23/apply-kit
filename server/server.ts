@@ -2,13 +2,20 @@
 // on your subscription. Binds to 127.0.0.1 only and rejects requests from other websites.
 // Run: bun E:\Work\job-hunt\extension\server\server.ts   (or start.cmd)
 import { readdirSync, readFileSync, writeFileSync, existsSync, mkdirSync, statSync } from "node:fs";
-import { join } from "node:path";
+import { dirname, join } from "node:path";
 import { Index, asContext } from "./rag";
 import { findContacts, slug, type FindInput, type Research } from "./contacts";
 import { Ledger } from "./contacts/ledger";
+import { logToFile, openUrl, replaceOldCopy, startTray } from "./tray";
+// Built into ApplyKit.exe (build-exe.ts) these files are packed inside the exe; with `bun server.ts` they are the files here.
+import DASHBOARD from "./dashboard.html" with { type: "file" };
+import UI_CSS from "../ui.css" with { type: "file" };
+import CONTEXT_EXAMPLE from "./context.example.md" with { type: "file" };
 
 const PORT = Number(process.env.APPLYKIT_PORT) || 4777;
-const DIR = import.meta.dir;
+// In ApplyKit.exe the code sits in a virtual folder, so your files live next to the exe instead.
+const EXE = /[\\/]~BUN[\\/]/.test(import.meta.dir);
+const DIR = EXE ? dirname(process.execPath) : import.meta.dir;
 // Your prepared applications (markdown "packs"). Override with APPLYKIT_PACKS.
 const PACKS = process.env.APPLYKIT_PACKS || (existsSync(join(DIR, "..", "..", "applications")) ? join(DIR, "..", "..", "applications") : join(DIR, "..", "packs"));
 // Everything you save lives here. Override with APPLYKIT_DATA (tests use a temp folder).
@@ -20,7 +27,7 @@ const MODEL = process.env.APPLYKIT_MODEL || "sonnet";
 const FACTS = join(DATA, "facts.md");
 function contextFile(): string {
   if (existsSync(join(DIR, "context.md"))) return join(DIR, "context.md");
-  const example = join(DIR, "context.example.md");
+  const example = CONTEXT_EXAMPLE;
   if (!existsSync(FACTS)) return example;
   const out = join(DATA, "context.generated.md");
   const tpl = readFileSync(example, "utf8");
@@ -32,6 +39,10 @@ function contextFile(): string {
 const CONFIG_FILE = existsSync(join(DIR, "config.json")) ? join(DIR, "config.json") : join(DIR, "config.example.json");
 
 if (!existsSync(DATA)) mkdirSync(DATA);
+if (EXE) {
+  logToFile(DATA);
+  await replaceOldCopy(PORT);
+}
 
 // ---------- Claude ----------
 // web: let Claude use WebSearch/WebFetch (people research). Otherwise no tools at all.
@@ -476,10 +487,10 @@ Bun.serve({
     if (req.method === "OPTIONS") return new Response(null, { headers: cors(req) });
     const url = new URL(req.url);
     if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) {
-      return new Response(Bun.file(join(DIR, "dashboard.html")), { headers: { "content-type": "text/html; charset=utf-8" } });
+      return new Response(Bun.file(DASHBOARD), { headers: { "content-type": "text/html; charset=utf-8" } });
     }
     if (req.method === "GET" && url.pathname === "/ui.css") {
-      return new Response(Bun.file(join(DIR, "..", "ui.css")), { headers: { "content-type": "text/css; charset=utf-8" } });
+      return new Response(Bun.file(UI_CSS), { headers: { "content-type": "text/css; charset=utf-8" } });
     }
     if (req.method === "GET" && url.pathname === "/api/pack") {
       const p = loadPacks().find((x) => x.file === url.searchParams.get("file"));
@@ -501,3 +512,9 @@ Bun.serve({
 });
 
 console.log(`Apply Kit server on http://localhost:${PORT} (model: ${MODEL}). Dashboard: http://localhost:${PORT}`);
+if (EXE) {
+  const site = "https://apply-kit-app.vercel.app";
+  startTray({ port: PORT, dataDir: DATA, site });
+  // First run: no profile yet, so open the Setup page.
+  if (!existsSync(PROFILE)) openUrl(`${site}/#setup`);
+}

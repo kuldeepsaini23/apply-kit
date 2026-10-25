@@ -13,3 +13,4 @@ server/node_modules/
 __pycache__/
 site/
 .vercel/
+server/ApplyKit.exe

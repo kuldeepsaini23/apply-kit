@@ -661,7 +661,7 @@ async function loadSetup() {
   try { setup = await api("/api/setup"); serverOk = true; } catch { setup = null; }
   const steps = [
     stepRow(ext, "Chrome extension", ext ? "Connected." : `Download the code from <a href="${REPO}" target="_blank">GitHub</a>, open <b>chrome://extensions</b>, turn on Developer mode, click <b>Load unpacked</b> and pick the folder. Then refresh this page.`),
-    stepRow(LOCAL || ext ? serverOk : null, "Apply Kit helper on your computer", serverOk ? "Running." : `Install <a href="https://bun.sh" target="_blank">Bun</a>, then in the folder run <code>cd server && bun install && bun server.ts</code> (on Windows, double-click <b>start-server.cmd</b>). Keep it running while you apply.`),
+    stepRow(LOCAL || ext ? serverOk : null, "Apply Kit helper on your computer", serverOk ? "Running." : `On Windows, download <a href="https://github.com/kuldeepsaini23/apply-kit/releases/latest" target="_blank">ApplyKit.exe</a>, put it in its own folder and run it. It sits by the clock (right-click it to start it with Windows). Elsewhere, install <a href="https://bun.sh" target="_blank">Bun</a> and run <code>cd server && bun install && bun server.ts</code>.`),
     stepRow(serverOk ? setup.claudeInstalled : null, "Claude Code, logged in", serverOk && setup.claudeInstalled ? "Installed. Test the login once:" : `Install <a href="https://claude.com/claude-code" target="_blank">Claude Code</a> and run <code>claude</code> once to log in. It runs on your Claude plan; no API key.`,
       serverOk && setup.claudeInstalled ? `<button class="btn sm" id="s-test">Test Claude</button>` : ""),
     stepRow(serverOk ? setup.profile : null, "Your profile", setup?.profile ? "Saved." : "Fill it in below. Forms are filled from it."),
