@@ -96,6 +96,10 @@
   .empty { display: grid; place-items: center; text-align: center; padding: 40px 16px; color: var(--muted-foreground); gap: 6px; }
   .empty .ring { width: 44px; height: 44px; border-radius: 12px; display: grid; place-items: center; }
   table { width: 100%; border-collapse: collapse; }
+  .nowrap { white-space: nowrap; }
+  .appsplit { grid-template-columns: minmax(0, 1fr); }
+  td.loc { max-width: 160px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #apps select.input { width: auto; min-width: 0; height: 30px; padding-top: 0; padding-bottom: 0; font-size: 12.5px; }
   select.input { height: 28px; padding: 0 6px; font-size: 12.5px; border-radius: 8px; width: auto; }
   .ch-row { display: grid; grid-template-columns: 90px 1fr 70px; gap: 10px; align-items: center; font-size: 13px; padding: 6px 0; }
   th, td { text-align: left; padding: 11px 12px; }
@@ -286,7 +290,7 @@
       <button class="btn" id="copyrows"><svg class="i"><use href="#i-copy"/></svg>Copy rows for TRACKER.md</button>
     </div>
     <div class="stats" id="funnel"></div>
-    <div class="split" style="grid-template-columns:2fr 1fr">
+    <div class="split appsplit">
       <div class="card" style="padding:6px;overflow-x:auto">
         <table>
           <thead><tr><th>Date</th><th>Company</th><th class="hide-sm">Channel</th><th>Fit</th><th>Status</th><th>Follow up</th><th></th></tr></thead>
@@ -397,6 +401,10 @@ const $ = (id) => document.getElementById(id);
 const ic = (n) => `<svg class="i"><use href="#i-${n}"/></svg>`;
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
 const TODAY = () => new Date().toISOString().slice(0, 10);
+// "2026-10-25" -> "25 Oct" (or "Oct 25"), in the viewer's own date style.
+const fmtDay = (d) => { const t = new Date(String(d || "").slice(0, 10) + "T00:00:00"); return isNaN(t) ? String(d || "") : t.toLocaleDateString(undefined, { day: "numeric", month: "short" }); };
+// Job boards often send company slugs in lowercase ("sarvam"); show them capitalized.
+const nameCase = (s) => (s && s === s.toLowerCase() ? s.replace(/(^|[\s-])([a-z])/g, (m, a, b) => a + b.toUpperCase()) : s);
 let ext = false, apps = [], packs = [], conn = {}, CFG = {};
 
 // ---- theme ----
@@ -521,7 +529,7 @@ function render() {
     return `<div class="item">
       <div class="fit ${tone(p.score)}" title="Fit score">${p.score ?? "–"}</div>
       <div style="min-width:0"><div class="co">${esc(p.company)} ${conn[p.company] ? `<span class="badge ai" title="People you know there">${ic("users")}${conn[p.company]}</span>` : ""}</div><div class="ro">${esc(p.role)}</div></div>
-      <div class="st">${st ? `<span class="badge ok">${ic("check")}Applied ${esc(st.date.slice(5))}</span>` : fill ? `<span class="badge brand">Form</span>` : `<span class="badge">Email / DM</span>`}</div>
+      <div class="st">${st ? `<span class="badge ok">${ic("check")}Applied ${esc(fmtDay(st.date))}</span>` : fill ? `<span class="badge brand">Form</span>` : `<span class="badge">Email / DM</span>`}</div>
       <div class="acts">
         <button class="btn sm" data-i="${i}" data-a="pack">${ic("users")}People</button>
         ${p.link ? `<button class="btn sm icon" data-i="${i}" data-a="view" title="Open job post">${ic("ext")}</button>` : ""}
@@ -556,12 +564,12 @@ function render() {
     const fu = plusDays(a.date, 5), due = a.status === "Applied" && fu <= TODAY();
     const opts = (list, cur) => list.map((x) => `<option ${x === cur ? "selected" : ""}>${x}</option>`).join("");
     return `<tr>
-      <td class="muted">${esc(a.date.slice(5))}</td>
+      <td class="muted nowrap">${esc(fmtDay(a.date))}</td>
       <td><div style="font-weight:600">${esc(a.company)}</div><div class="ro">${esc(a.role)}</div></td>
       <td class="hide-sm"><select class="input" data-id="${a.id}" data-f="channel">${opts(CHANNELS, a.channel || "Form")}</select></td>
       <td>${a.score ? `<span class="badge ${tone(+a.score) === "hi" ? "ok" : tone(+a.score) === "mid" ? "warn" : ""}">${esc(a.score)}</span>` : `<span class="muted">–</span>`}</td>
       <td><select class="input" data-id="${a.id}" data-f="status">${opts(STATUSES, a.status || "Applied")}</select></td>
-      <td>${a.status !== "Applied" ? `<span class="muted xs">–</span>` : due ? `<span class="badge warn">Due ${esc(fu.slice(5))}</span>` : `<span class="muted xs">${esc(fu.slice(5))}</span>`}</td>
+      <td>${a.status !== "Applied" ? `<span class="muted xs">–</span>` : due ? `<span class="badge warn">Due ${esc(fmtDay(fu))}</span>` : `<span class="muted xs nowrap">${esc(fmtDay(fu))}</span>`}</td>
       <td style="text-align:right">${a.url ? `<a class="btn sm icon" href="${esc(a.url)}" target="_blank" title="Open">${ic("ext")}</a>` : ""}</td></tr>`;
   }).join("") || `<tr><td colspan="7"><div class="empty">${ic("inbox")}Nothing yet. Fill one, submit it, then mark it applied.</div></td></tr>`;
 }
@@ -687,32 +695,51 @@ const REPO = "https://github.com/kuldeepsaini23/apply-kit";
 const PFIELDS = [
   ["About you", "What every form asks first.", [
     ["fullName", "Full name", { ph: "Alex Doe", w: 3 }], ["email", "Email", { type: "email", ph: "alex@example.com", w: 3 }],
-    ["phone", "Phone", { type: "tel", ph: "+91 90000 00000", hint: "with country code" }], ["location", "Location", { ph: "Bengaluru, India", w: 4 }],
-    ["city", "City", { ph: "Bengaluru", more: 1 }], ["state", "State", { ph: "Karnataka", more: 1 }], ["country", "Country", { ph: "India", more: 1 }]]],
+    ["phone", "Phone", { type: "tel", ph: "+1 555 010 0199", hint: "with country code" }], ["location", "Location", { ph: "City, Country", w: 4 }],
+    ["city", "City", { ph: "Toronto", more: 1 }], ["state", "State or region", { ph: "Ontario", more: 1 }], ["country", "Country", { ph: "Canada", more: 1 }]]],
   ["Links", "Pasted into the URL fields.", [
     ["linkedin", "LinkedIn", { type: "url", ph: "https://linkedin.com/in/…", w: 3 }], ["github", "GitHub", { type: "url", ph: "https://github.com/…", w: 3 }],
     ["website", "Website or portfolio", { type: "url", ph: "https://…", w: 3, more: 1 }], ["x", "X / Twitter", { type: "url", ph: "https://x.com/…", w: 3, more: 1 }]]],
   ["Work", "Your current job and when you can join.", [
     ["company", "Current company", { ph: "Acme", w: 3 }], ["title", "Current title", { ph: "Software Engineer", w: 3 }],
-    ["years", "Years of experience", { type: "number", ph: "3" }], ["notice", "Notice period", { ph: "30 days", w: 4 }], ["noticeDays", "Notice in days", { type: "number", ph: "30", more: 1 }],
-    ["startText", "When can you start", { ph: "Within 30 days of an offer", w: 6, more: 1 }]]],
-  ["Pay", "Numbers go into number boxes; the written versions go into text boxes.", "pay"],
+    ["years", "Years of experience", { type: "number", ph: "3" }], ["notice", "Notice period", { ph: "4 weeks", w: 4 }], ["noticeDays", "Notice in days", { type: "number", ph: "28", more: 1 }],
+    ["startText", "When can you start", { ph: "Within a month of an offer", w: 6, more: 1 }]]],
+  ["Pay", "Pick your currency. Numbers go into number boxes; the written versions go into text boxes.", "pay"],
   ["Eligibility", "Short answers to the usual yes/no questions.", [
-    ["relocateText", "Open to relocating?", { ph: "Yes, anywhere in India; also open to remote", w: 6, more: 1 }],
-    ["workAuthText", "Work authorization", { ph: "Indian citizen. India roles: no sponsorship needed.", w: 6, more: 1 }]]],
+    ["relocateText", "Open to relocating?", { ph: "Yes, within my country; also open to remote", w: 6, more: 1 }],
+    ["workAuthText", "Work authorization", { ph: "Citizen, no sponsorship needed here. Would need a visa for other countries.", w: 6, more: 1 }]]],
   ["Education", "Your highest degree.", [
-    ["school", "University", { ph: "University of Delhi", w: 3, more: 1 }], ["degree", "Degree", { ph: "B.Tech Computer Science", w: 3, more: 1 }],
+    ["school", "University", { ph: "University of Toronto", w: 3, more: 1 }], ["degree", "Degree", { ph: "BSc Computer Science", w: 3, more: 1 }],
     ["field", "Field of study", { ph: "Computer Science", w: 3, more: 1 }], ["gradYear", "Graduation year", { type: "number", ph: "2024", more: 1 }]]],
 ];
 const MORE = PFIELDS.flatMap(([, , l]) => Array.isArray(l) ? l.filter(([, , o]) => o.more).map(([k]) => k) : []).length;
-// Pay rows: label, then [key, example] for ₹ per year, written ₹, written for $ forms, $ per year.
+// Pay rows: label, then the keys for per year and written in your currency, then written and per year in USD
+// (for forms that ask in dollars). With USD as your currency, only the first two columns show; save copies them over.
 const PAY = [
-  ["Current", ["currentCTCNum", "1000000"], ["currentCTC", "₹10 LPA fixed"], ["currentUSD", "~$12K a year"], null],
-  ["Expected", ["expectedCTCNum", "1800000"], ["expectedCTC", "₹18–22 LPA, negotiable"], ["expectedUSD", "$2,500–3,500 a month"], ["expectedUSDNum", "36000"]],
+  ["Current", "currentCTCNum", "currentCTC", "currentUSD", null],
+  ["Expected", "expectedCTCNum", "expectedCTC", "expectedUSD", "expectedUSDNum"],
 ];
-const PAYKEYS = PAY.flatMap(([, ...c]) => c.filter(Boolean).map(([k]) => k));
+const COMMON_CUR = ["USD", "EUR", "GBP", "INR", "CAD", "AUD", "SGD", "AED", "CHF", "JPY"];
+const REGION_CUR = { US: "USD", GB: "GBP", IN: "INR", CA: "CAD", AU: "AUD", SG: "SGD", AE: "AED", CH: "CHF", JP: "JPY", NZ: "NZD", BR: "BRL", MX: "MXN", ZA: "ZAR", NG: "NGN", PK: "PKR", PH: "PHP", ID: "IDR", SE: "SEK", NO: "NOK", DK: "DKK", PL: "PLN",
+  DE: "EUR", FR: "EUR", ES: "EUR", IT: "EUR", NL: "EUR", IE: "EUR", PT: "EUR", AT: "EUR", BE: "EUR", FI: "EUR", GR: "EUR" };
+// Older profiles were rupees only; otherwise guess from the browser's region.
+function guessCurrency(v) {
+  if (v.currency) return v.currency;
+  if (/₹|lpa/i.test(`${v.currentCTC || ""} ${v.expectedCTC || ""}`)) return "INR";
+  try { return REGION_CUR[new Intl.Locale(navigator.language).maximize().region] || "USD"; } catch { return "USD"; }
+}
+const curName = (c) => { try { return new Intl.DisplayNames(undefined, { type: "currency" }).of(c); } catch { return c; } };
+function money(n, cur) {
+  if (!n) return "";
+  if (cur === "INR" && n >= 100000) return `₹${+(n / 100000).toFixed(1)} LPA`;
+  try { return new Intl.NumberFormat(undefined, { style: "currency", currency: cur, notation: "compact", maximumFractionDigits: 1 }).format(n); } catch { return `${n} ${cur}`; }
+}
+// Realistic example numbers per currency, for the placeholders.
+const payExample = (cur) => ({ INR: 1800000, JPY: 9000000, IDR: 300000000, PKR: 4000000, NGN: 12000000, PHP: 1500000, BRL: 180000, MXN: 600000, ZAR: 700000, SEK: 650000, NOK: 700000, DKK: 550000 }[cur] || 85000);
+const payCols = (cur) => (cur === "USD" ? 2 : 4);
+const payKeys = (cur) => PAY.flatMap(([, ...c]) => c.slice(0, payCols(cur)).filter(Boolean));
+const pkeys = (cur) => [...PFIELDS.flatMap(([, , l]) => Array.isArray(l) ? l.map(([k]) => k) : []), ...payKeys(cur)];
 const NUMKEYS = new Set(["currentCTCNum", "expectedCTCNum", "expectedUSDNum", ...PFIELDS.flatMap(([, , l]) => Array.isArray(l) ? l.filter(([, , o]) => o.type === "number").map(([k]) => k) : [])]);
-const PKEYS = PFIELDS.flatMap(([, , l]) => Array.isArray(l) ? l.map(([k]) => k) : PAYKEYS);
 let setup = null, profile = {};
 
 function stepRow(ok, title, body, action = "") {
@@ -746,17 +773,37 @@ async function loadSetup() {
   return { serverOk, allDone };
 }
 
-const lakh = (n) => (n >= 100000 ? `₹${+(n / 100000).toFixed(1)} LPA` : "");
 const pInput = (k, o, v) =>
   `<input class="input" name="${k}" type="${o.type === "number" ? "text" : o.type || "text"}"${o.type === "number" ? ' inputmode="numeric"' : ""} placeholder="${esc(o.ph || "")}" value="${esc(v ?? "")}" aria-label="${esc(o.label)}">`;
+function curSelect(cur) {
+  let all = [];
+  try { all = Intl.supportedValuesOf("currency").filter((c) => !COMMON_CUR.includes(c)); } catch {}
+  const opt = (c) => `<option value="${c}"${c === cur ? " selected" : ""}>${esc(curName(c))} (${c})</option>`;
+  return `<select class="input" name="currency" aria-label="Currency">${COMMON_CUR.map(opt).join("")}<option disabled>──────────</option>${all.map(opt).join("")}</select>`;
+}
+function payBody(cur, values) {
+  const cols = payCols(cur), ex = payExample(cur), round = (n) => Math.round(n / 1000) * 1000;
+  const ph = {
+    Current: [round(ex * 0.8), `${money(round(ex * 0.8), cur)} base`, "~$70K a year", ""],
+    Expected: [ex, `${money(ex, cur)}–${money(round(ex * 1.2), cur)}, negotiable`, "$85K–100K a year", "90000"],
+  };
+  const head = [`Per year, ${cur}`, `Written, ${cur}`, "Written, for USD forms", "USD per year"].slice(0, cols);
+  return `<div class="sgrid" style="margin-bottom:14px"><label class="sfield w3"><span>Currency <small>you're paid in</small></span>${curSelect(cur)}</label></div>
+    <div class="paytbl" style="grid-template-columns:72px repeat(${cols}, minmax(0, 1fr))"><span></span>${head.map((h) => `<span class="h">${esc(h)}</span>`).join("")}${PAY.map(([row, ...keys]) =>
+      `<span class="r">${row}</span>` + keys.slice(0, cols).map((k, i) => k
+        ? pInput(k, { type: i === 0 || i === 3 ? "number" : "text", ph: String(ph[row][i]), label: `${row} pay` }, values[k])
+        : '<span class="none">Not asked</span>').join("")).join("")}</div>`;
+}
+let pView = {};
 function renderProfile(values) {
+  pView = values;
+  const cur = guessCurrency(values);
   $("pform").innerHTML = PFIELDS.map(([group, why, list]) => {
-    const keys = Array.isArray(list) ? list.map(([k]) => k) : PAYKEYS;
+    const keys = Array.isArray(list) ? list.map(([k]) => k) : payKeys(cur);
     const body = Array.isArray(list)
       ? `<div class="sgrid">${list.map(([k, label, o]) =>
           `<label class="sfield${o.w ? " w" + o.w : ""}${o.more ? " more" : ""}"><span>${esc(label)}${o.hint ? ` <small>${esc(o.hint)}</small>` : ""}</span>${pInput(k, { ...o, label }, values[k])}</label>`).join("")}</div>`
-      : `<div class="paytbl"><span></span><span class="h">₹ per year</span><span class="h">Written, ₹</span><span class="h">Written, for $ forms</span><span class="h">$ per year</span>${PAY.map(([row, ...cells]) =>
-          `<span class="r">${row}</span>` + cells.map((c, i) => c ? pInput(c[0], { type: i === 0 || i === 3 ? "number" : "text", ph: c[1], label: `${row} pay` }, values[c[0]]) : '<span class="none">Not asked</span>').join("")).join("")}</div>`;
+      : `<div>${payBody(cur, values)}</div>`;
     const hidden = Array.isArray(list) && list.every(([, , o]) => o.more);
     return `<section class="psec${hidden ? " more" : ""}" data-keys="${keys.join(" ")}"><div><h4>${esc(group)}</h4><p>${esc(why)}</p><span class="cnt"></span></div>${body}</section>`;
   }).join("");
@@ -769,22 +816,24 @@ function pValues() {
 }
 let pSaved = {};
 function pRefresh() {
-  const v = pValues(), has = (k) => v[k] != null && v[k] !== "";
+  const v = pValues(), cur = v.currency || "USD", keys = pkeys(cur), has = (k) => v[k] != null && v[k] !== "";
   for (const sec of $("pform").querySelectorAll(".psec")) {
-    const keys = sec.dataset.keys.split(" "), n = keys.filter(has).length, c = sec.querySelector(".cnt");
-    c.textContent = `${n} of ${keys.length} filled`;
-    c.classList.toggle("full", n === keys.length);
+    const ks = sec.dataset.keys.split(" "), n = ks.filter(has).length, c = sec.querySelector(".cnt");
+    c.textContent = `${n} of ${ks.length} filled`;
+    c.classList.toggle("full", n === ks.length);
   }
-  const n = PKEYS.filter(has).length;
-  $("p-meter").innerHTML = `<i><b style="width:${Math.round((n / PKEYS.length) * 100)}%"></b></i>${n} of ${PKEYS.length} filled`;
-  const dirty = PKEYS.some((k) => (v[k] ?? "") !== (pSaved[k] ?? ""));
+  const n = keys.filter(has).length;
+  $("p-meter").innerHTML = `<i><b style="width:${Math.round((n / keys.length) * 100)}%"></b></i>${n} of ${keys.length} filled`;
+  const dirty = [...keys, "currency"].some((k) => (v[k] ?? "") !== (pSaved[k] ?? ""));
   $("p-bar").hidden = !dirty;
   $("p-save").disabled = !dirty;
   $("p-more").textContent = $("pform").classList.contains("all") ? "Show fewer fields" : `More details (${MORE} fields: city, education, relocation…)`;
-  // Read the ₹ numbers back in lakhs, so 1800000 vs 180000 is easy to catch before saving.
-  const pay = [v.currentCTCNum && "now " + lakh(v.currentCTCNum), v.expectedCTCNum && "expected " + lakh(v.expectedCTCNum)].filter(Boolean);
+  // Read the pay numbers back in words, so a missing or extra zero is easy to catch before saving.
+  const pay = [v.currentCTCNum && "now " + money(v.currentCTCNum, cur), v.expectedCTCNum && "expected " + money(v.expectedCTCNum, cur)].filter(Boolean);
   $("p-barText").textContent = "Unsaved changes" + (pay.length ? ` · pay ${pay.join(", ")}` : "");
 }
+// Changing the currency redraws the pay table (labels, examples, USD columns) and keeps what you typed.
+$("pform").addEventListener("change", (e) => { if (e.target.name === "currency") renderProfile({ ...pView, ...pValues() }); });
 $("pform").addEventListener("input", (e) => { e.target.classList.remove("fromcv"); pRefresh(); });
 $("p-more").onclick = () => { $("pform").classList.toggle("all"); pRefresh(); };
 $("p-resume").onclick = async () => {
@@ -813,10 +862,11 @@ $("p-resume").onclick = async () => {
 
 async function loadSetupForms() {
   const [p, f] = await Promise.all([api("/api/profile"), api("/api/facts")]);
-  profile = p.missing ? { answers: p.suggested?.answers || {} } : p;
-  pSaved = p.missing ? {} : profile;
+  profile = p.missing ? { answers: {}, ...p.suggested } : p;
+  // Older saved profiles have no currency; count the guessed one as saved so the form doesn't start out "unsaved".
+  pSaved = p.missing ? {} : { ...profile, currency: guessCurrency(profile) };
   renderProfile(p.missing ? p.suggested || {} : profile);
-  $("p-note").hidden = !(p.missing && p.suggested);
+  $("p-note").hidden = !(p.missing && p.suggested?.fullName);
   $("p-note").textContent = "Filled in from your profile.js. Check it, then save.";
   $("f-text").value = f.text || "";
   $("f-private").hidden = !f.privateContext;
@@ -828,6 +878,8 @@ $("p-undo").onclick = () => { renderProfile(pSaved); $("p-note").hidden = true; 
 $("p-save2").onclick = () => $("p-save").click();
 $("p-save").onclick = async () => {
   const next = { ...profile, ...pValues() };
+  // Paid in USD: the side panel then always answers in dollars, from the USD fields.
+  if (next.currency === "USD") Object.assign(next, { currentUSD: next.currentCTC, expectedUSD: next.expectedCTC, expectedUSDNum: next.expectedCTCNum });
   const [first, ...rest] = (next.fullName || "").split(/\s+/);
   Object.assign(next, { firstName: first || "", lastName: rest.join(" "), yearsText: next.years != null ? String(next.years) : "" });
   const btns = [$("p-save"), $("p-save2")];
@@ -1037,10 +1089,10 @@ async function loadJobs() {
     $("jobs").innerHTML = jobs.map((j, i) => `
       <tr>
         <td>${j.fit ? `<span class="badge ${j.fit.fit >= 70 ? "ok" : j.fit.fit >= 50 ? "warn" : "bad"}" title="${esc(j.fit.why)}">${j.fit.fit}</span>` : '<span class="muted xs">–</span>'}</td>
-        <td><b>${esc(j.company)}</b>${j.applied ? ' <span class="badge">applied</span>' : ""}${j.fit?.why ? `<div class="muted xs">${esc(j.fit.why)}</div>` : ""}</td>
+        <td><b>${esc(nameCase(j.company))}</b>${j.applied ? ' <span class="badge">applied</span>' : ""}${j.fit?.why ? `<div class="muted xs">${esc(j.fit.why)}</div>` : ""}</td>
         <td><a href="${esc(j.url)}" target="_blank">${esc(j.title)}</a></td>
-        <td class="hide-sm muted xs">${esc(j.location)}</td>
-        <td class="muted xs">${esc(j.posted)}</td>
+        <td class="hide-sm muted xs loc" title="${esc(j.location)}">${esc(j.location)}</td>
+        <td class="muted xs nowrap">${esc(fmtDay(j.posted))}</td>
         <td>${j.people === null ? `<button class="btn sm brand" data-j="${i}">${ic("users")}Find HR</button>` : `<button class="btn sm" data-j="${i}">${ic("users")}${j.people} found</button>`}</td>
       </tr>`).join("") || `<tr><td colspan="6"><div class="empty">${ic("refresh")}No jobs yet. Hit Scan now.</div></td></tr>`;
   } catch (e) { $("jobs").innerHTML = `<tr><td colspan="6" class="muted xs">Couldn't load jobs: ${esc(e.message)}</td></tr>`; }
@@ -1093,7 +1145,7 @@ async function loadNetwork() {
     $("o-list").innerHTML = out.slice().reverse().map((o) => `
       <div class="conn">
         <div class="grow"><div><b>${esc(o.person)}</b> <span class="muted">· ${esc(o.company)}</span></div>
-        <div class="muted xs">${esc(o.date.slice(5))} · ${esc(o.channel)}${o.relation === "connection" ? " · referral ask" : ""}${o.title ? " · " + esc(o.title) : ""}</div></div>
+        <div class="muted xs">${esc(fmtDay(o.date))} · ${esc(o.channel)}${o.relation === "connection" ? " · referral ask" : ""}${o.title ? " · " + esc(o.title) : ""}</div></div>
         <select class="input" data-oid="${o.id}" style="height:28px;width:auto;font-size:12.5px;padding:0 6px">${["Sent", "Replied", "No reply"].map((s) => `<option ${s === o.status ? "selected" : ""}>${s}</option>`).join("")}</select>
       </div>`).join("") || `<div class="empty">${ic("send")}No messages yet. Open a company's People, draft one, send it, then Mark sent.</div>`;
   } catch {}

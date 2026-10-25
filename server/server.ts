@@ -155,6 +155,7 @@ function legacyProfile(): any {
   if (!existsSync(file)) return null;
   try { const g: any = {}; new Function("globalThis", readFileSync(file, "utf8"))(g); return g.APPLY_PROFILE ?? null; } catch { return null; }
 }
+const profileDone = (p: any) => !!(p && (p.fullName || p.email));
 const readJson = (f: string, d: any) => (existsSync(f) ? JSON.parse(readFileSync(f, "utf8")) : d);
 
 // Company name → comparable key: "Composio, Inc." / "composio.dev" / "Composio (YC W24)" → "composio"
@@ -288,13 +289,17 @@ const routes: Record<string, (b: any) => Promise<any> | any> = {
     let claudeInstalled = false;
     try { const p = Bun.spawn(["claude", "--version"], { stdout: "pipe", stderr: "pipe" }); claudeInstalled = (await p.exited) === 0; } catch {}
     return {
-      claudeInstalled, profile: existsSync(PROFILE), resume: existsSync(RESUME), facts: existsSync(FACTS) || existsSync(join(DIR, "context.md")),
+      claudeInstalled, profile: profileDone(readJson(PROFILE, null)), resume: existsSync(RESUME), facts: existsSync(FACTS) || existsSync(join(DIR, "context.md")),
       privateContext: existsSync(join(DIR, "context.md")),
     };
   },
   // A tiny prompt to prove `claude -p` is logged in.
   "POST /api/setup/test-claude": async () => ({ reply: (await claude('Reply with exactly: {"ok":true}')).slice(0, 80) }),
-  "GET /api/profile": () => readJson(PROFILE, null) ?? { missing: true, suggested: legacyProfile() },
+  // Until the form is saved (a resume upload alone stores only the file name), offer profile.js values to prefill it.
+  "GET /api/profile": () => {
+    const p = readJson(PROFILE, null);
+    return profileDone(p) ? p : { missing: true, suggested: { ...legacyProfile(), ...p } };
+  },
   "POST /api/profile": (b) => {
     if (!b || typeof b !== "object" || Array.isArray(b)) throw new Error("profile must be an object");
     const clean = Object.fromEntries(Object.entries(b).filter(([k, v]) => /^[a-zA-Z]{1,40}$/.test(k) && (typeof v !== "object" || k === "answers")));
@@ -383,10 +388,12 @@ Links must be full https URLs. location is "City, Country". company and title ar
     const applied = appliedCompanies();
     const todo = (readJson(JOBS, []) as any[]).filter((j) => !scores[j.url] && !applied.has(squash(j.company))).slice(0, 40);
     if (!todo.length) return { scored: 0, left: 0 };
+    const me = readJson(PROFILE, null) ?? legacyProfile() ?? {};
+    const where = me.country || me.location || "my country (see my profile)";
     const prompt = `# JOBS
 ${todo.map((j, i) => `${i}. ${j.company}: ${j.title} (${j.location || "?"}${j.remote ? ", remote" : ""}; posted ${j.posted || "?"})`).join("\n")}
 
-Rate how likely I am to get an interview for each job, 0 to 100, using my profile and the rubric: stack match from the title, seniority (5+ years or staff/principal titles score low), whether someone in India can be hired for that location, and domain fit. Be strict; most jobs should land under 60.
+Rate how likely I am to get an interview for each job, 0 to 100, using my profile and the rubric: stack match from the title, seniority against my ${me.years ? me.years + " years" : "years"} of experience (titles far above it score low), whether someone based in ${where} can be hired for that location, and domain fit. Be strict; most jobs should land under 60.
 Return ONLY JSON: {"scores":[{"i":0,"fit":0,"why":"under 12 words"}]}`;
     const { scores: got = [] } = json<any>(await claude(prompt));
     for (const g of got) { const j = todo[g.i]; if (j && Number.isFinite(+g.fit)) scores[j.url] = { fit: Math.max(0, Math.min(100, Math.round(+g.fit))), why: String(g.why || "").slice(0, 120) }; }

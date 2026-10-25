@@ -350,6 +350,11 @@ $("rescan").onclick = () => { checkServer(); scan(); };
   await setCurrency(currency);
   await checkServer();
   P = await loadProfile();
+  // The first button is your own currency (set on the Setup page; "INR" is its stored name). USD-only profiles need no switch.
+  const local = P?.currency || "INR";
+  $("inr").textContent = new Intl.NumberFormat("en", { style: "currency", currency: local, currencyDisplay: "narrowSymbol" }).formatToParts(0).find((p) => p.type === "currency").value;
+  $("inr").closest(".seg").style.display = local === "USD" ? "none" : "";
+  if (local === "USD") await setCurrency("USD");
   renderAnswers();
   refreshLog();
   scan();
