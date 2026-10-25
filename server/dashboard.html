@@ -868,7 +868,8 @@ async function loadSetupForms() {
   renderProfile(p.missing ? p.suggested || {} : profile);
   $("p-note").hidden = !(p.missing && p.suggested?.fullName);
   $("p-note").textContent = "Filled in from your profile.js. Check it, then save.";
-  $("f-text").value = f.text || "";
+  $("f-text").value = factsSaved = f.text || "";
+  factsState();
   $("f-private").hidden = !f.privateContext;
   $("r-state").textContent = setup.resume ? "A resume is uploaded. Pick a file to replace it." : "No resume yet.";
   renderAnswerRows(Object.entries(profile.answers || {}));
@@ -911,10 +912,39 @@ $("r-file").onchange = async (e) => {
   } catch (err) { toast("Upload failed", err.message); }
 };
 
-$("f-save").onclick = async () => {
-  try { const r = await api("/api/facts", { text: $("f-text").value }); $("f-saved").textContent = `Saved (${r.chars} characters).`; loadSetup(); }
-  catch (e) { toast("Couldn't save", e.message); }
+// Save buttons show their own progress: "Saving…", then "Saved" for a moment, plus a toast.
+async function saving(btn, label, work) {
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spin"></span>Saving…';
+  try {
+    const msg = await work();
+    btn.innerHTML = `${ic("check")}Saved`;
+    toast("Saved", msg);
+    setTimeout(() => { btn.textContent = label; btn.disabled = false; }, 1800);
+  } catch (e) {
+    toast("Couldn't save", e.message);
+    btn.textContent = label; btn.disabled = false;
+  }
+}
+let factsSaved = "";
+const factsState = () => {
+  const dirty = $("f-text").value !== factsSaved;
+  if (!$("f-save").querySelector(".spin, svg")) $("f-save").disabled = !dirty;
+  $("f-saved").textContent = dirty ? "Unsaved changes" : factsSaved ? `${factsSaved.length.toLocaleString()} characters saved` : "";
 };
+$("f-text").addEventListener("input", factsState);
+$("f-save").onclick = () => saving($("f-save"), "Save facts", async () => {
+  const text = $("f-text").value;
+  const r = await api("/api/facts", { text });
+  factsSaved = text;
+  loadSetup();
+  return `Facts for Claude: ${r.chars.toLocaleString()} characters.`;
+});
+// Coming back to this tab: pick up facts saved elsewhere, unless you're mid-edit.
+document.addEventListener("visibilitychange", async () => {
+  if (document.hidden || $("f-text").value !== factsSaved || !setup) return;
+  try { const f = await api("/api/facts"); if ($("f-text").value === factsSaved) { $("f-text").value = factsSaved = f.text || ""; factsState(); } } catch {}
+});
 
 function renderAnswerRows(rows) {
   $("a-rows").innerHTML = rows.map(([label, text]) => `<div class="arow"><input class="input" placeholder="Label" value="${esc(label)}"><textarea class="input" rows="2" placeholder="Answer">${esc(text)}</textarea><button class="btn ghost icon" title="Remove">✕</button></div>`).join("")
@@ -923,11 +953,11 @@ function renderAnswerRows(rows) {
 const answerRows = () => [...$("a-rows").querySelectorAll(".arow")].map((r) => [r.querySelector("input").value.trim(), r.querySelector("textarea").value.trim()]);
 $("a-rows").onclick = (e) => { if (e.target.closest("button")) { e.target.closest(".arow").remove(); } };
 $("a-add").onclick = () => renderAnswerRows([...answerRows(), ["", ""]]);
-$("a-save").onclick = async () => {
+$("a-save").onclick = () => saving($("a-save"), "Save answers", async () => {
   profile.answers = Object.fromEntries(answerRows().filter(([l, t]) => l && t));
-  try { await api("/api/profile", profile); $("a-saved").textContent = "Saved."; }
-  catch (e) { toast("Couldn't save", e.message); }
-};
+  await api("/api/profile", profile);
+  return `${Object.keys(profile.answers).length} saved answers. Reopen the side panel to use them.`;
+});
 
 // ---- people, referrals, outreach ----
 const MY_EMAIL = () => CFG.email || "";
