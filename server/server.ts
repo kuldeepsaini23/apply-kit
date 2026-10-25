@@ -321,6 +321,8 @@ Links must be full https URLs. location is "City, Country". company and title ar
   "GET /api/facts": () => ({ text: existsSync(FACTS) ? readFileSync(FACTS, "utf8") : "", privateContext: existsSync(join(DIR, "context.md")) }),
   "POST /api/facts": (b) => {
     const text = String(b.text || "").slice(0, 40000);
+    // Keep the version this replaces, so an accidental save can be undone.
+    if (existsSync(FACTS) && readFileSync(FACTS, "utf8") !== text) writeFileSync(join(DATA, "facts.previous.md"), readFileSync(FACTS));
     writeFileSync(FACTS, text);
     return { ok: true, chars: text.length };
   },
