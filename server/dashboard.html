@@ -24,6 +24,16 @@
   .page-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; margin-bottom: 20px; }
   .page-head h1 { font-size: 28px; font-weight: 700; }
   .page-head p { margin: 4px 0 0; color: var(--muted-foreground); max-width: 620px; }
+  .sec-title { font-family: var(--font-display); font-size: 17px; font-weight: 600; margin: 0 0 2px; }
+  .sec-sub { margin: 0 0 10px; }
+  .hcard-head { display: flex; align-items: center; gap: 8px; }
+  .hcard-sub { margin: 4px 0 12px; }
+  .hrow { display: flex; align-items: center; gap: 12px; padding: 10px 0; border-top: 1px solid var(--border); }
+  .hrow:first-child { border-top: 0; }
+  .hrow .grow { min-width: 0; }
+  .hsetup { display: flex; align-items: center; gap: 16px; flex-wrap: wrap; margin-bottom: 16px; border-color: color-mix(in srgb, var(--primary) 40%, var(--border)); }
+  .auto-box { margin-top: 14px; padding: 12px 16px; }
+  .auto-box summary { cursor: pointer; }
   .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
   .stat { display: flex; flex-direction: column; gap: 2px; }
   .stat .k { font-size: 13px; font-weight: 500; color: var(--muted-foreground); }
@@ -40,7 +50,7 @@
   .co { font-weight: 600; font-size: 14.5px; }
   .ro { font-size: 12.5px; color: var(--muted-foreground); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
   .acts { display: flex; gap: 6px; justify-content: flex-end; flex-wrap: wrap; }
-  .split { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; align-items: start; }
+  .split { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 16px; align-items: start; }
   .step { display: flex; gap: 12px; align-items: center; padding: 12px; border-top: 1px solid var(--border); }
   .step:first-child { border-top: 0; }
   .step code, .page-head code { font: 12px var(--font-mono); background: var(--muted); padding: 1px 5px; border-radius: 5px; }
@@ -162,6 +172,7 @@
 <svg width="0" height="0" style="position:absolute">
   <symbol id="i-spark" viewBox="0 0 24 24"><path d="M12 3l1.8 5.2L19 10l-5.2 1.8L12 17l-1.8-5.2L5 10l5.2-1.8z"/><path d="M19 15l.7 2.3L22 18l-2.3.7L19 21l-.7-2.3L16 18l2.3-.7z"/></symbol>
   <symbol id="i-ext" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+  <symbol id="i-plus" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
   <symbol id="i-file" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M16 13H8M16 17H8M10 9H8"/></symbol>
   <symbol id="i-pen" viewBox="0 0 24 24"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></symbol>
@@ -196,71 +207,62 @@
       </div>
     </div>
     <nav class="tabs" role="tablist">
-      <button class="tab" role="tab" data-tab="pipeline" aria-selected="true">Pipeline <span class="count" id="c-ready">–</span></button>
-      <button class="tab" role="tab" data-tab="jobs">Jobs <span class="count" id="c-jobs">–</span></button>
-      <button class="tab" role="tab" data-tab="quick">Any job</button>
-      <button class="tab" role="tab" data-tab="apps">Applications <span class="count" id="c-apps">–</span></button>
-      <button class="tab" role="tab" data-tab="network">Network <span class="count" id="c-out">–</span></button>
-      <button class="tab" role="tab" data-tab="setup">Setup <span class="dot" id="setupdot"></span></button>
+      <button class="tab" role="tab" data-tab="home" aria-selected="true">Home</button>
+      <button class="tab" role="tab" data-tab="jobs">Find jobs <span class="count" id="c-jobs">–</span></button>
+      <button class="tab" role="tab" data-tab="apps">Applied <span class="count" id="c-apps">–</span></button>
+      <button class="tab" role="tab" data-tab="network">People <span class="count" id="c-out">–</span></button>
+      <button class="tab" role="tab" data-tab="setup">Profile <span class="dot" id="setupdot"></span></button>
     </nav>
   </div>
 </header>
 
 <main class="shell">
-  <!-- PIPELINE -->
-  <section data-panel="pipeline">
+  <!-- HOME -->
+  <section data-panel="home">
     <div class="page-head">
       <div>
-        <h1>Pipeline</h1>
-        <p>Your prepared applications, best fit first. <b>Fill</b> opens the form and fills it from your profile; <b>Claude fill</b> also answers the open questions. Nothing is ever submitted.</p>
+        <h1>Home</h1>
+        <p>What to do next in your job search.</p>
       </div>
     </div>
+    <div id="h-setup"></div>
     <div class="stats">
-      <div class="card stat"><span class="k">Ready to apply</span><span class="v" id="s-ready">–</span><span class="s">prepared packs not sent yet</span></div>
-      <div class="card stat"><span class="k">Applied</span><span class="v" id="s-applied">–</span><span class="s" id="s-today">– today</span></div>
-      <div class="card stat"><span class="k">Daily target</span><span class="v"><span id="s-pace">–</span><span class="muted" style="font-size:18px">/5</span></span><div class="progress" style="margin-top:6px"><b id="s-pacebar" style="width:0"></b></div></div>
-      <div class="card stat"><span class="k">Days left</span><span class="v" id="s-days">–</span><div class="progress" style="margin-top:6px"><b id="s-daysbar" style="width:0;background:var(--warn)"></b></div></div>
+      <div class="card stat"><span class="k">Applied</span><span class="v" id="s-applied">–</span><span class="s" id="s-week">–</span></div>
+      <div class="card stat"><span class="k">Applied today</span><span class="v"><span id="s-pace">–</span><span class="muted" style="font-size:18px">/5</span></span><div class="progress" style="margin-top:6px"><b id="s-pacebar" style="width:0"></b></div></div>
+      <div class="card stat"><span class="k">Replies</span><span class="v" id="s-replies">–</span><span class="s" id="s-rate">–</span></div>
+      <div class="card stat"><span class="k">Days to your deadline</span><span class="v" id="s-days">–</span><div class="progress" style="margin-top:6px"><b id="s-daysbar" style="width:0;background:var(--warn)"></b></div></div>
     </div>
-    <div class="card list" id="packs"></div>
+    <div class="split">
+      <div class="card">
+        <div class="hcard-head"><span class="card-title grow">Apply next</span><button class="btn sm ghost" data-go="jobs">See all jobs</button></div>
+        <p class="muted xs hcard-sub">Your best matches you haven't applied to. <b>Open &amp; fill</b> opens the application and fills it in; you check it and submit.</p>
+        <div id="h-next"></div>
+      </div>
+      <div class="card">
+        <div class="hcard-head"><span class="card-title grow">Follow up</span><button class="btn sm ghost" data-go="apps">See all applied</button></div>
+        <p class="muted xs hcard-sub">Applied 5 or more days ago with no reply yet. A short nudge to the recruiter often gets one.</p>
+        <div id="h-follow"></div>
+      </div>
+    </div>
   </section>
 
-  <!-- JOBS -->
+  <!-- FIND JOBS (scanned jobs, your shortlist, and a job you add yourself) -->
   <section data-panel="jobs" hidden>
     <div class="page-head">
       <div>
-        <h1>Jobs</h1>
-        <p>Live roles from the board scanner. <b>Find HR</b> finds the people who hire there and their best contact: phone, then email, then LinkedIn. Nothing is ever sent.</p>
+        <h1>Find jobs</h1>
+        <p>Jobs that match your profile, best fit first. Click <b>Find recruiters</b> to see who hires there. Nothing is sent or submitted without you.</p>
       </div>
-      <div class="row" style="gap:6px">
-        <button class="btn ai" id="j-score"><svg class="i"><use href="#i-spark"/></svg>Claude score</button>
-        <button class="btn brand" id="j-scan"><svg class="i"><use href="#i-refresh"/></svg>Scan now</button>
+      <div class="row" style="gap:6px;flex-wrap:wrap">
+        <button class="btn" id="q-toggle"><svg class="i"><use href="#i-plus"/></svg>Add a job</button>
+        <button class="btn ai" id="j-score"><svg class="i"><use href="#i-spark"/></svg>Score with Claude</button>
+        <button class="btn brand" id="j-scan"><svg class="i"><use href="#i-refresh"/></svg>Scan for new jobs</button>
       </div>
     </div>
-    <div class="card row" style="flex-wrap:wrap;gap:12px;margin-bottom:12px">
-      <label class="row" style="gap:8px"><input type="checkbox" id="j-auto"> <b>Auto find HR</b></label>
-      <span class="muted xs">for the newest jobs, up to</span>
-      <input class="input" id="j-perday" type="number" min="1" max="50" style="width:70px;height:30px">
-      <span class="muted xs">companies a day (each uses about a minute of your Claude plan)</span>
-      <label class="row" style="gap:6px"><input type="checkbox" id="j-hide" checked> <span class="xs">hide applied</span></label>
-      <span class="grow"></span>
-      <span class="muted xs" id="j-meta"></span>
-    </div>
-    <div class="card" style="padding:6px;overflow-x:auto">
-      <table>
-        <thead><tr><th>Fit</th><th>Company</th><th>Role</th><th class="hide-sm">Location</th><th>Posted</th><th>People</th></tr></thead>
-        <tbody id="jobs"></tbody>
-      </table>
-    </div>
-  </section>
 
-  <!-- ANY JOB -->
-  <section data-panel="quick" hidden>
-    <div class="page-head">
-      <div>
-        <h1>Any job</h1>
-        <p>Paste a posting you found anywhere. Claude scores it against your rubric, writes the DM and email, or opens the form and fills it.</p>
-      </div>
-    </div>
+    <div id="q-card" hidden style="margin-bottom:20px">
+    <h2 class="sec-title">Add a job you found</h2>
+    <p class="muted xs sec-sub">Found a job on LinkedIn, a company site or in an email? Paste it here to score it, get a message to the recruiter, or open and fill the application.</p>
     <div class="split">
       <div class="card" style="display:flex;flex-direction:column;gap:12px">
         <div class="split" style="gap:10px">
@@ -270,24 +272,51 @@
         <div><label class="label" for="q-url">Job or application URL</label><input class="input" id="q-url" placeholder="https://jobs.ashbyhq.com/…"></div>
         <div><label class="label" for="q-jd">Job description</label><textarea class="input" id="q-jd" placeholder="Paste the full posting"></textarea></div>
         <div class="row" style="flex-wrap:wrap">
-          <button class="btn ai" id="q-score"><svg class="i"><use href="#i-target"/></svg>Score</button>
-          <button class="btn ai" id="q-dm"><svg class="i"><use href="#i-send"/></svg>DM + email</button>
-          <button class="btn brand" id="q-open" style="margin-left:auto"><svg class="i"><use href="#i-spark"/></svg>Open + Claude fill</button>
+          <button class="btn ai" id="q-score"><svg class="i"><use href="#i-target"/></svg>How well do I fit?</button>
+          <button class="btn ai" id="q-dm"><svg class="i"><use href="#i-send"/></svg>Write to the recruiter</button>
+          <button class="btn brand" id="q-open" style="margin-left:auto"><svg class="i"><use href="#i-spark"/></svg>Open &amp; fill</button>
         </div>
       </div>
       <div class="card">
-        <div class="row" style="margin-bottom:10px"><span class="card-title grow">Claude's output</span><button class="btn sm" id="q-copy" hidden><svg class="i"><use href="#i-copy"/></svg>Copy</button></div>
-        <div class="empty" id="q-empty"><div class="ring badge ai" style="height:44px"><svg class="i"><use href="#i-spark"/></svg></div><div>Score or outreach shows up here.</div><div class="xs">Each call takes about 10 seconds on your Claude plan.</div></div>
+        <div class="row" style="margin-bottom:10px"><span class="card-title grow">Claude's answer</span><button class="btn sm" id="q-copy" hidden><svg class="i"><use href="#i-copy"/></svg>Copy</button></div>
+        <div class="empty" id="q-empty"><div class="ring badge ai" style="height:44px"><svg class="i"><use href="#i-spark"/></svg></div><div>Your fit score or the message shows up here.</div><div class="xs">Takes about 10 seconds.</div></div>
         <pre class="out" id="q-out" hidden></pre>
       </div>
     </div>
+    </div>
+
+    <div id="sl-wrap" hidden style="margin-bottom:20px">
+      <h2 class="sec-title">Your shortlist</h2>
+      <p class="muted xs sec-sub">Jobs you prepared notes for. Click <b>Notes &amp; people</b> to read them.</p>
+      <div class="card list" id="packs"></div>
+    </div>
+
+    <div class="row" style="flex-wrap:wrap;gap:10px;margin-bottom:8px">
+      <h2 class="sec-title grow" style="margin:0">From job boards</h2>
+      <label class="row" style="gap:6px"><input type="checkbox" id="j-hide" checked> <span class="xs">Hide companies I applied to</span></label>
+    </div>
+    <p class="muted xs sec-sub" id="j-meta"></p>
+    <div class="card" style="padding:6px;overflow-x:auto">
+      <table>
+        <thead><tr><th title="How well you match, out of 100">Fit</th><th>Company</th><th>Role</th><th class="hide-sm">Location</th><th>Posted</th><th></th></tr></thead>
+        <tbody id="jobs"></tbody>
+      </table>
+    </div>
+    <details class="card auto-box">
+      <summary><b>Find recruiters automatically</b> <span class="muted xs">(off unless you turn it on)</span></summary>
+      <div class="row" style="flex-wrap:wrap;gap:10px;margin-top:10px">
+        <label class="row" style="gap:8px"><input type="checkbox" id="j-auto"> Every day, look up recruiters for the newest jobs, up to</label>
+        <input class="input" id="j-perday" type="number" min="1" max="50" style="width:70px;height:30px">
+        <span class="muted xs">companies. Each one uses about a minute of your Claude plan.</span>
+      </div>
+    </details>
   </section>
 
   <!-- APPLICATIONS -->
   <section data-panel="apps" hidden>
     <div class="page-head">
-      <div><h1>Applications</h1><p>Your own experiment: every application, how it was sent, and what came back. Update the status when someone replies.</p></div>
-      <button class="btn" id="copyrows"><svg class="i"><use href="#i-copy"/></svg>Copy rows for TRACKER.md</button>
+      <div><h1>Applied</h1><p>Every job you've applied to. When someone replies, change the status here, so you can see which way of applying works best.</p></div>
+      <button class="btn ghost" id="copyrows" title="Copies every row as a Markdown table"><svg class="i"><use href="#i-copy"/></svg>Copy as table</button>
     </div>
     <div class="stats" id="funnel"></div>
     <div class="split appsplit">
@@ -298,20 +327,25 @@
         </table>
       </div>
       <div class="card">
-        <div class="card-title" style="margin-bottom:10px">What's working</div>
+        <div class="card-title" style="margin-bottom:10px">Which way of applying gets replies</div>
         <div id="bychannel"></div>
-        <p class="muted xs" style="margin:12px 0 0">Reply = any human response (recruiter, founder, rejection with feedback). Fill this honestly and after ~20 applications you'll know which channel to double down on.</p>
+        <p class="muted xs" style="margin:12px 0 0">A reply is any answer from a person, even a no. After about 20 applications this shows whether forms, emails, messages or referrals work best for you.</p>
       </div>
     </div>
   </section>
   <!-- NETWORK -->
   <section data-panel="network" hidden>
     <div class="page-head">
-      <div><h1>Network</h1><p>Your LinkedIn connections (for referrals) and every message you've sent. Nothing is ever sent from here: you press send in Gmail, LinkedIn or X.</p></div>
+      <div><h1>People</h1><p>Messages you've sent to recruiters, and people you already know at a company (they can refer you). You always send messages yourself, from Gmail, LinkedIn or X.</p></div>
     </div>
     <div class="split">
       <div class="card">
-        <div class="row" style="margin-bottom:10px"><span class="card-title grow">LinkedIn connections</span><span class="badge" id="n-count">not imported</span></div>
+        <div class="row" style="margin-bottom:10px"><span class="card-title grow">Messages you've sent</span><span class="muted xs" id="o-rate"></span></div>
+        <div id="o-list"></div>
+      </div>
+      <div class="card">
+        <div class="row" style="margin-bottom:4px"><span class="card-title grow">People you know</span><span class="badge" id="n-count">not imported</span></div>
+        <p class="muted xs" style="margin:0 0 10px">Import your LinkedIn connections once. Jobs at companies where you know someone get marked, so you can ask for a referral.</p>
         <label class="drop" id="drop">
           <input type="file" id="csv" accept=".csv" hidden>
           <svg class="i" style="width:22px;height:22px"><use href="#i-upload"/></svg>
@@ -326,17 +360,13 @@
         <input class="input" id="n-search" placeholder="Search people, companies, titles…" style="margin-top:14px">
         <div id="n-results" style="margin-top:8px"></div>
       </div>
-      <div class="card">
-        <div class="row" style="margin-bottom:10px"><span class="card-title grow">Outreach</span><span class="muted xs" id="o-rate"></span></div>
-        <div id="o-list"></div>
-      </div>
     </div>
   </section>
   <!-- SETUP -->
   <section data-panel="setup" hidden>
     <div class="page-head">
       <div>
-        <h1>Setup</h1>
+        <h1>Profile</h1>
         <p>Apply Kit fills job applications, writes answers and finds people to contact. The AI runs on <b>your own computer</b> with your own Claude Code login, so your profile and data never leave it. This page only talks to your computer through the extension.</p>
       </div>
     </div>
@@ -512,32 +542,31 @@ function render() {
   const now = new Date(), start = new Date((CFG.start || TODAY()) + "T00:00:00"), deadline = new Date((CFG.deadline || plusDays(TODAY(), 30)) + "T23:59:59");
   const left = Math.max(0, Math.ceil((deadline - now) / 864e5));
   const today = apps.filter((a) => a.date === TODAY()).length;
-  const ready = packs.filter((p) => !statusOf(p)).length;
   $("s-days").textContent = left;
   $("s-daysbar").style.width = `${Math.min(100, ((now - start) / (deadline - start)) * 100)}%`;
   $("s-applied").textContent = apps.length;
-  $("s-today").textContent = `${today} today`;
+  $("s-week").textContent = `${apps.filter((a) => a.date >= plusDays(TODAY(), -6)).length} in the last 7 days`;
   $("s-pace").textContent = today;
   $("s-pacebar").style.width = `${Math.min(100, (today / 5) * 100)}%`;
-  $("s-ready").textContent = ready;
-  $("c-ready").textContent = ready;
   $("c-apps").textContent = apps.length;
-
+  // Shortlist: jobs you prepared notes for. Ones you applied to live in Applied, unless you untick "Hide…".
+  const hideApplied = $("j-hide").checked;
   $("packs").innerHTML = packs.map((p, i) => {
     const st = statusOf(p);
+    if (st && hideApplied) return "";
     const fill = canFill(p);
     return `<div class="item">
       <div class="fit ${tone(p.score)}" title="Fit score">${p.score ?? "–"}</div>
       <div style="min-width:0"><div class="co">${esc(p.company)} ${conn[p.company] ? `<span class="badge ai" title="People you know there">${ic("users")}${conn[p.company]}</span>` : ""}</div><div class="ro">${esc(p.role)}</div></div>
-      <div class="st">${st ? `<span class="badge ok">${ic("check")}Applied ${esc(fmtDay(st.date))}</span>` : fill ? `<span class="badge brand">Form</span>` : `<span class="badge">Email / DM</span>`}</div>
+      <div class="st">${st ? `<span class="badge ok">${ic("check")}Applied ${esc(fmtDay(st.date))}</span>` : fill ? "" : `<span class="badge" title="This one has no online form">Apply by email</span>`}</div>
       <div class="acts">
-        <button class="btn sm" data-i="${i}" data-a="pack">${ic("users")}People</button>
-        ${p.link ? `<button class="btn sm icon" data-i="${i}" data-a="view" title="Open job post">${ic("ext")}</button>` : ""}
-        ${fill && !st ? `<button class="btn sm" data-i="${i}" data-a="fill" ${ext ? "" : "disabled"}>${ic("pen")}Fill</button>
-        <button class="btn sm brand" data-i="${i}" data-a="aifill" ${ext ? "" : "disabled"}>${ic("spark")}Claude fill</button>` : ""}
-        ${st ? "" : `<button class="btn sm ghost" data-i="${i}" data-a="applied" title="Mark as applied">${ic("check")}</button>`}
+        <button class="btn sm" data-i="${i}" data-a="pack">${ic("users")}Notes &amp; people</button>
+        ${p.link ? `<button class="btn sm icon" data-i="${i}" data-a="view" title="Open the job post">${ic("ext")}</button>` : ""}
+        ${fill && !st ? `<button class="btn sm brand" data-i="${i}" data-a="aifill" ${ext ? "" : "disabled"} title="Opens the application and fills it in, with Claude answering the questions. You submit it.">${ic("spark")}Open &amp; fill</button>` : ""}
+        ${st ? "" : `<button class="btn sm ghost" data-i="${i}" data-a="applied" title="Moves it to Applied">${ic("check")}I applied</button>`}
       </div></div>`;
-  }).join("") || `<div class="empty">${ic("inbox")}No packs found in applications/.</div>`;
+  }).join("");
+  $("sl-wrap").hidden = !$("packs").children.length;
 
   const STATUSES = ["Applied", "Replied", "Interview", "Offer", "Rejected", "Ghosted"];
   const CHANNELS = ["Form", "Email", "DM", "Referral"];
@@ -547,6 +576,8 @@ function render() {
   const interviewed = (a) => reached(a, ["Interview", "Offer"]);
   const pct = (n, d) => (d ? Math.round((n / d) * 100) : 0);
   const nRep = apps.filter(replied).length, nInt = apps.filter(interviewed).length, nOffer = apps.filter((a) => a.status === "Offer").length;
+  $("s-replies").textContent = nRep;
+  $("s-rate").textContent = apps.length ? `${pct(nRep, apps.length)}% of applications` : "none yet";
   $("funnel").innerHTML = [
     ["Applied", apps.length, `${apps.filter((a) => a.date >= plusDays(TODAY(), -6)).length} in the last 7 days`],
     ["Replies", nRep, `${pct(nRep, apps.length)}% reply rate`],
@@ -571,8 +602,61 @@ function render() {
       <td><select class="input" data-id="${a.id}" data-f="status">${opts(STATUSES, a.status || "Applied")}</select></td>
       <td>${a.status !== "Applied" ? `<span class="muted xs">–</span>` : due ? `<span class="badge warn">Due ${esc(fmtDay(fu))}</span>` : `<span class="muted xs nowrap">${esc(fmtDay(fu))}</span>`}</td>
       <td style="text-align:right">${a.url ? `<a class="btn sm icon" href="${esc(a.url)}" target="_blank" title="Open">${ic("ext")}</a>` : ""}</td></tr>`;
-  }).join("") || `<tr><td colspan="7"><div class="empty">${ic("inbox")}Nothing yet. Fill one, submit it, then mark it applied.</div></td></tr>`;
+  }).join("") || `<tr><td colspan="7"><div class="empty">${ic("inbox")}Nothing here yet. After you submit an application, click <b>I applied</b> (in Find jobs or the side panel) and it shows up here.</div></td></tr>`;
+  renderHome();
 }
+
+// ---- home: what to do next ----
+let allJobs = [], setupState = null;
+function renderHome() {
+  // Setup card until everything is green.
+  const s = setupState;
+  $("h-setup").innerHTML = s && s.done < s.total
+    ? `<div class="card hsetup"><div class="grow"><div class="card-title">Finish setting up: ${s.done} of ${s.total} done</div>
+        <div class="muted xs">Apply Kit needs the extension, the helper app, Claude Code, your profile, your resume and a few facts about you.</div>
+        <div class="progress" style="margin-top:8px;max-width:320px"><b style="width:${Math.round((s.done / s.total) * 100)}%"></b></div></div>
+        <button class="btn brand" data-go="setup">Continue setup</button></div>`
+    : "";
+
+  // Apply next: your shortlist and the scored board jobs you haven't applied to, best fit first.
+  const seen = new Set();
+  const next = [
+    ...packs.filter((p) => !statusOf(p) && canFill(p)).map((p) => ({ company: p.company, role: p.role, fit: p.score, url: p.apply, link: p.link })),
+    ...allJobs.filter((j) => !j.applied && j.fit).map((j) => ({ company: nameCase(j.company), role: j.title, fit: j.fit.fit, why: j.fit.why, url: j.apply || j.url, link: j.url })),
+  ].filter((x) => { const k = `${x.company}|${x.role}`.toLowerCase(); return !seen.has(k) && seen.add(k); })
+    .sort((a, b) => (b.fit ?? 0) - (a.fit ?? 0)).slice(0, 5);
+  $("h-next").innerHTML = next.map((x, i) => `<div class="hrow">
+      <span class="badge ${x.fit >= 70 ? "ok" : x.fit >= 50 ? "warn" : ""}" title="Fit out of 100">${x.fit ?? "–"}</span>
+      <div class="grow"><div class="co">${esc(x.company)}</div><div class="ro">${esc(x.role)}${x.why ? " · " + esc(x.why) : ""}</div></div>
+      ${x.link ? `<a class="btn sm icon" href="${esc(x.link)}" target="_blank" title="Open the job post">${ic("ext")}</a>` : ""}
+      <button class="btn sm brand" data-next="${i}" ${ext ? "" : 'disabled title="Needs the Chrome extension"'}>${ic("spark")}Open &amp; fill</button></div>`).join("")
+    || `<div class="empty">${ic("refresh")}<div>No jobs to suggest yet.</div><button class="btn sm brand" data-go="jobs">Find jobs</button></div>`;
+  renderHome.next = next;
+
+  // Follow up: applied 5+ days ago, still no reply.
+  const due = apps.filter((a) => a.status === "Applied" && plusDays(a.date, 5) <= TODAY()).sort((a, b) => a.date.localeCompare(b.date));
+  $("h-follow").innerHTML = due.slice(0, 5).map((a) => `<div class="hrow">
+      <div class="grow"><div class="co">${esc(a.company)}</div><div class="ro">${esc(a.role)} · applied ${esc(fmtDay(a.date))}</div></div>
+      ${a.url ? `<a class="btn sm icon" href="${esc(a.url)}" target="_blank" title="Open the job">${ic("ext")}</a>` : ""}
+      <button class="btn sm" data-replied="${a.id}">${ic("check")}They replied</button></div>`).join("")
+    + (due.length > 5 ? `<div class="muted xs" style="padding-top:8px">and ${due.length - 5} more in Applied.</div>` : "")
+    || `<div class="empty">${ic("inbox")}<div>Nothing to follow up on.</div><div class="xs">Applications show up here 5 days after you apply.</div></div>`;
+}
+document.addEventListener("click", (e) => {
+  const go = e.target.closest("[data-go]");
+  if (go) { showTab(go.dataset.go); scrollTo(0, 0); }
+});
+$("h-next").addEventListener("click", (e) => {
+  const b = e.target.closest("button[data-next]"); if (!b) return;
+  const x = renderHome.next[+b.dataset.next];
+  openAndFill(x.url, true, x.company);
+});
+$("h-follow").addEventListener("click", async (e) => {
+  const b = e.target.closest("button[data-replied]"); if (!b) return;
+  await api("/api/applications/update", { id: b.dataset.replied, status: "Replied" });
+  await load();
+  toast("Nice, a reply", "Marked as Replied in Applied.");
+});
 
 $("apps").addEventListener("change", async (e) => {
   const sel = e.target.closest("select[data-id]"); if (!sel) return;
@@ -622,7 +706,7 @@ async function openSheet(i) {
   $("sh-role").textContent = p.role;
   $("sh-body").textContent = "Loading…";
   $("sh-foot").innerHTML = (p.link ? `<a class="btn" href="${esc(p.link)}" target="_blank">${ic("ext")}Job post</a>` : "") +
-    (canFill(p) ? `<button class="btn brand" data-i="${i}" data-a="aifill" ${ext ? "" : "disabled"}>${ic("spark")}Claude fill</button>` : "");
+    (canFill(p) ? `<button class="btn brand" data-i="${i}" data-a="aifill" ${ext ? "" : "disabled"}>${ic("spark")}Open &amp; fill</button>` : "");
   document.body.classList.add("open");
   loadPeople(p, false);
   const { body } = await api("/api/pack?file=" + encodeURIComponent(p.file));
@@ -685,8 +769,14 @@ setTimeout(async () => {
 }, 300);
 load().then(async () => {
   const s = await loadSetup();
-  if (!s.serverOk || (!s.allDone && !LOCAL)) showTab("setup");
+  // Nothing works without the helper, so start on Profile's checklist. Otherwise Home shows what's left.
+  if (!s.serverOk) showTab("setup");
 });
+$("q-toggle").onclick = () => {
+  const card = $("q-card");
+  card.hidden = !card.hidden;
+  if (!card.hidden) $("q-company").focus();
+};
 
 
 // ---- setup (first run, and the hosted site) ----
@@ -763,6 +853,8 @@ async function loadSetup() {
   $("s-forms").hidden = !serverOk;
   const allDone = serverOk && ext && setup.profile && setup.resume && setup.facts;
   $("setupdot").className = "dot " + (allDone ? "on" : "warn");
+  setupState = { done: [ext, serverOk, serverOk && setup.claudeInstalled, setup?.profile, setup?.resume, setup?.facts].filter(Boolean).length, total: 6 };
+  renderHome();
   const t = $("s-test");
   if (t) t.onclick = async () => {
     t.disabled = true; t.textContent = "Asking Claude…";
@@ -1097,7 +1189,7 @@ $("sh-people").addEventListener("click", async (e) => {
     const person = JSON.parse(box.dataset.person || "{}");
     await api("/api/outreach/log", { company: current.pack.company, role: current.pack.role, person: person.name, title: person.title, relation: person.relation, channel: ch, to: v("to"), subject: v("su"), body: v("body") });
     b.disabled = true; b.lastChild.textContent = "Logged";
-    toast("Outreach logged", `${person.name} at ${current.pack.company}. Mark it Replied in Network when they answer.`);
+    toast("Outreach logged", `${person.name} at ${current.pack.company}. When they answer, mark it Replied in People.`);
     loadNetwork();
   }
 });
@@ -1108,12 +1200,17 @@ async function loadJobs() {
   try {
     const [r, a] = await Promise.all([api("/api/jobs"), api("/api/auto")]);
     // Best fit first; unscored jobs by date after them. Already-applied companies hidden unless you ask.
+    allJobs = r.jobs;
     jobs = r.jobs.filter((j) => !(j.applied && $("j-hide").checked))
       .sort((x, y) => (y.fit?.fit ?? -1) - (x.fit?.fit ?? -1) || String(y.posted).localeCompare(String(x.posted)));
     $("c-jobs").textContent = jobs.length;
     const unscored = r.jobs.filter((j) => !j.fit && !j.applied).length;
-    $("j-score").innerHTML = `${ic("spark")}${unscored ? `Claude score (${unscored} new)` : "All scored"}`;
-    $("j-meta").textContent = (r.scannedAt ? `Scanned ${new Date(r.scannedAt).toLocaleString()}` : "Not scanned yet") + ` · auto found ${a.doneToday}/${a.perDay} today${a.running ? " (running)" : ""}`;
+    $("j-score").innerHTML = `${ic("spark")}${unscored ? `Score ${unscored} new with Claude` : "All jobs scored"}`;
+    $("j-score").title = "Claude rates how well each job matches your profile, out of 100";
+    $("j-meta").textContent = (r.scannedAt ? `Last checked ${new Date(r.scannedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}. ` : "Not checked yet. ")
+      + "Live openings from company job boards (Ashby, Greenhouse, Lever) that match your profile."
+      + (a.enabled ? ` Recruiters found automatically today: ${a.doneToday} of ${a.perDay}${a.running ? " (running now)" : ""}.` : "");
+    renderHome();
     $("j-auto").checked = a.enabled;
     $("j-perday").value = a.perDay;
     $("jobs").innerHTML = jobs.map((j, i) => `
@@ -1123,8 +1220,8 @@ async function loadJobs() {
         <td><a href="${esc(j.url)}" target="_blank">${esc(j.title)}</a></td>
         <td class="hide-sm muted xs loc" title="${esc(j.location)}">${esc(j.location)}</td>
         <td class="muted xs nowrap">${esc(fmtDay(j.posted))}</td>
-        <td>${j.people === null ? `<button class="btn sm brand" data-j="${i}">${ic("users")}Find HR</button>` : `<button class="btn sm" data-j="${i}">${ic("users")}${j.people} found</button>`}</td>
-      </tr>`).join("") || `<tr><td colspan="6"><div class="empty">${ic("refresh")}No jobs yet. Hit Scan now.</div></td></tr>`;
+        <td>${j.people === null ? `<button class="btn sm" data-j="${i}" title="Find the recruiters and hiring managers there, and draft a message">${ic("users")}Find recruiters</button>` : `<button class="btn sm" data-j="${i}">${ic("users")}${j.people} ${j.people === 1 ? "person" : "people"}</button>`}</td>
+      </tr>`).join("") || `<tr><td colspan="6"><div class="empty">${ic("refresh")}<div>No jobs yet.</div><div class="xs">Click <b>Scan for new jobs</b> to pull live openings that match your profile (about 30 seconds).</div></div></td></tr>`;
   } catch (e) { $("jobs").innerHTML = `<tr><td colspan="6" class="muted xs">Couldn't load jobs: ${esc(e.message)}</td></tr>`; }
 }
 $("jobs").addEventListener("click", (e) => {
@@ -1133,30 +1230,32 @@ $("jobs").addEventListener("click", (e) => {
   const pack = { company: j.company, role: j.title, link: j.url, apply: j.apply };
   $("sh-title").textContent = j.company;
   $("sh-role").textContent = `${j.title} · ${j.location}`;
-  $("sh-body").textContent = "No prepared notes for scanned jobs.";
+  $("sh-body").textContent = "";
   $("sh-foot").innerHTML = `<a class="btn" href="${esc(j.url)}" target="_blank">${ic("ext")}Job post</a>` +
-    (ext ? `<button class="btn brand" id="j-fill">${ic("spark")}Claude fill</button>` : "");
+    (ext ? `<button class="btn brand" id="j-fill">${ic("spark")}Open &amp; fill</button>` : "");
   document.body.classList.add("open");
   const fill = $("j-fill"); if (fill) fill.onclick = () => openAndFill(j.apply, true, j.company);
   loadPeople(pack, false).then(loadJobs);
 });
 $("j-scan").onclick = async () => {
   $("j-scan").disabled = true;
-  toast("Scanning job boards", "Ashby, Greenhouse and Lever, about 30 seconds…", 60000);
-  try { const r = await api("/api/jobs/scan", {}); toast(`${r.count} jobs fit your filters`); }
+  $("j-scan").innerHTML = '<span class="spin"></span>Scanning…';
+  toast("Looking for new jobs", "Checking company job boards, about 30 seconds…", 60000);
+  try { const r = await api("/api/jobs/scan", {}); toast(`Found ${r.count} jobs that match you`, "Click Score with Claude to rank them."); }
   catch (e) { toast("Scan failed", e.message); }
   $("j-scan").disabled = false;
+  $("j-scan").innerHTML = `${ic("refresh")}Scan for new jobs`;
   loadJobs();
 };
 $("j-score").onclick = async () => {
   $("j-score").disabled = true;
-  $("j-score").textContent = "Claude is scoring…";
+  $("j-score").innerHTML = '<span class="spin"></span>Claude is scoring…';
   try { const r = await api("/api/jobs/score", {}); toast(r.scored ? `Scored ${r.scored} jobs${r.left ? `, ${r.left} left: press again` : ""}` : "Nothing new to score"); }
   catch (e) { toast("Scoring failed: " + e.message); }
   $("j-score").disabled = false;
   loadJobs();
 };
-$("j-hide").onchange = loadJobs;
+$("j-hide").onchange = () => { render(); loadJobs(); };
 const saveAuto = async () => { await api("/api/auto", { enabled: $("j-auto").checked, perDay: +$("j-perday").value || 10 }); loadJobs(); };
 $("j-auto").onchange = saveAuto;
 $("j-perday").onchange = saveAuto;
@@ -1177,7 +1276,7 @@ async function loadNetwork() {
         <div class="grow"><div><b>${esc(o.person)}</b> <span class="muted">· ${esc(o.company)}</span></div>
         <div class="muted xs">${esc(fmtDay(o.date))} · ${esc(o.channel)}${o.relation === "connection" ? " · referral ask" : ""}${o.title ? " · " + esc(o.title) : ""}</div></div>
         <select class="input" data-oid="${o.id}" style="height:28px;width:auto;font-size:12.5px;padding:0 6px">${["Sent", "Replied", "No reply"].map((s) => `<option ${s === o.status ? "selected" : ""}>${s}</option>`).join("")}</select>
-      </div>`).join("") || `<div class="empty">${ic("send")}No messages yet. Open a company's People, draft one, send it, then Mark sent.</div>`;
+      </div>`).join("") || `<div class="empty">${ic("send")}<div>No messages yet.</div><div class="xs">In Find jobs, click <b>Find recruiters</b> on a job. Claude drafts a message; you send it and click <b>Mark sent</b>.</div></div>`;
   } catch {}
 }
 $("o-list").addEventListener("change", async (e) => {
@@ -1191,7 +1290,7 @@ async function importCsv(file) {
   if (!file) return;
   try {
     const r = await api("/api/connections/import", { csv: await file.text() });
-    toast(`Imported ${r.count} connections`, "Companies where you know someone now show a people badge in Pipeline.");
+    toast(`Imported ${r.count} connections`, "Jobs at companies where you know someone now show a people badge.");
     load();
   } catch (e) { toast("Import failed", e.message); }
 }
