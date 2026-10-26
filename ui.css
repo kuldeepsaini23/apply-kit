@@ -151,3 +151,9 @@ textarea.input { height: auto; min-height: 140px; padding: 10px; line-height: 1.
 /* Output block */
 .out { white-space: pre-wrap; background: var(--muted); border: 1px solid var(--border); border-radius: 12px; padding: 12px; font-size: 13px; line-height: 1.55; margin: 0; }
 a:hover { text-decoration: underline; text-underline-offset: 3px; }
+
+/* Segmented switch (one choice of a few) */
+.seg { display: inline-flex; padding: 2px; border-radius: 9px; background: var(--muted); border: 1px solid var(--border); }
+.seg button { height: 22px; padding: 0 8px; border: 0; background: none; border-radius: 7px; font: 500 11.5px var(--font-sans); color: var(--muted-foreground); cursor: pointer; }
+.seg button.on { background: var(--card); color: var(--foreground); box-shadow: 0 1px 2px rgb(0 0 0 / .12); }
+.seg button .n { opacity: .6; margin-left: 4px; }

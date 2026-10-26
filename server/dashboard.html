@@ -263,6 +263,11 @@
       <div class="card stat"><span class="k">Replies</span><span class="v" id="s-replies">–</span><span class="s" id="s-rate">–</span></div>
       <div class="card stat"><span class="k">Days to your deadline</span><span class="v" id="s-days">–</span><div class="progress" style="margin-top:6px"><b id="s-daysbar" style="width:0;background:var(--warn)"></b></div></div>
     </div>
+    <div class="card" style="margin-bottom:16px">
+      <div class="hcard-head"><span class="card-title grow">Replies</span><button class="btn sm" id="r-check">Check replies</button></div>
+      <p class="muted xs hcard-sub" id="r-sub">Claude reads your Gmail for emails from the companies you applied to (read-only, never sends or deletes) and updates their status.</p>
+      <div id="h-replies"></div>
+    </div>
     <div class="split">
       <div class="card">
         <div class="hcard-head"><span class="card-title grow">Apply next</span><button class="btn sm ghost" data-go="jobs">See all jobs</button></div>
@@ -324,6 +329,7 @@
 
     <div class="row" style="flex-wrap:wrap;gap:10px;margin-bottom:8px">
       <h2 class="sec-title grow" style="margin:0">From job boards</h2>
+      <div class="seg" id="j-where" title="Where the job is"></div>
       <label class="row" style="gap:6px"><input type="checkbox" id="j-hide" checked> <span class="xs">Hide companies I applied to</span></label>
     </div>
     <p class="muted xs sec-sub" id="j-meta"></p>
@@ -684,6 +690,47 @@ $("h-next").addEventListener("click", (e) => {
   const x = renderHome.next[+b.dataset.next];
   openAndFill(x.url, true, x.company);
 });
+// ---- replies (Gmail via the claude.ai connector) ----
+const KIND = { interview: ["Interview", "ok"], question: ["Replied", "brand"], rejection: ["Rejected", "bad"], auto: ["Auto-reply", ""] };
+async function loadReplies() {
+  let r;
+  try { r = await api("/api/replies"); } catch { return; }
+  const btn = $("r-check");
+  btn.disabled = r.running;
+  btn.innerHTML = r.running ? '<span class="spin"></span>Checking Gmail…' : `${ic("mail")}Check replies`;
+  $("r-sub").textContent = r.checkedAt
+    ? `Last checked ${new Date(r.checkedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}, then about every 8 hours. Read-only: Claude never sends, moves or deletes mail.`
+    : "Claude reads your Gmail for emails from the companies you applied to and updates their status. Read-only: it never sends, moves or deletes mail.";
+  const open = r.items.filter((x) => !x.seen);
+  $("h-replies").innerHTML = r.error === "no-gmail"
+    ? `<div class="empty">${ic("mail")}<div>Claude can't see a Gmail account yet.</div><div class="xs">On claude.ai open <b>Settings → Connectors</b>, connect <b>Gmail</b> with the address you apply from, then click <b>Check replies</b> again.</div><a class="btn sm" href="https://claude.ai/settings/connectors" target="_blank">${ic("ext")}Open claude.ai connectors</a></div>`
+    : open.map((x) => `<div class="hrow">
+        <span class="badge ${KIND[x.kind]?.[1] || ""}">${esc(KIND[x.kind]?.[0] || x.kind)}</span>
+        <div class="grow"><div class="co">${esc(x.company)}${x.spam ? ' <span class="badge warn" title="Gmail put this in Spam or Bin. Open it and mark it Not spam so their next email reaches your inbox.">in Spam/Bin</span>' : ""}</div>
+          <div class="ro">${esc(x.summary || x.subject || "")} · ${esc(fmtDay(x.date))}</div></div>
+        <a class="btn sm" href="https://mail.google.com/mail/#all/${encodeURIComponent(x.threadId)}" target="_blank">${ic("ext")}Open in Gmail</a>
+        <button class="btn sm ghost icon" data-seen="${esc(x.threadId)}" title="Done, hide this">${ic("check")}</button></div>`).join("")
+    || (r.error ? `<div class="muted xs">Last check failed: ${esc(r.error)}</div>`
+      : r.checkedAt ? `<div class="empty">${ic("inbox")}<div>No new replies.</div><div class="xs">Interviews, questions and rejections show up here, and their status in Applied updates by itself.</div></div>`
+      : `<div class="empty">${ic("mail")}<div>Not checked yet.</div><div class="xs">Click <b>Check replies</b>. It takes about a minute and uses your Claude plan.</div></div>`);
+  if (r.running) setTimeout(loadReplies, 5000);
+}
+$("r-check").onclick = async () => {
+  $("r-check").disabled = true;
+  $("r-check").innerHTML = '<span class="spin"></span>Checking Gmail…';
+  try {
+    const r = await api("/api/replies/check", {});
+    if (r.error === "no-gmail") toast("Connect Gmail first", "Claude can't see a Gmail account. See the steps in Replies.");
+    else toast(r.found ? `${r.found} new ${r.found === 1 ? "reply" : "replies"}` : "No new replies", r.found ? "Statuses in Applied are updated." : "Checked Gmail, including Spam and Bin.");
+  } catch (e) { toast("Couldn't check Gmail", e.message); }
+  await load();
+  loadReplies();
+};
+$("h-replies").addEventListener("click", async (e) => {
+  const b = e.target.closest("button[data-seen]"); if (!b) return;
+  await api("/api/replies/seen", { threadId: b.dataset.seen });
+  loadReplies();
+});
 $("h-follow").addEventListener("click", async (e) => {
   const b = e.target.closest("button[data-replied]"); if (!b) return;
   await api("/api/applications/update", { id: b.dataset.replied, status: "Replied" });
@@ -794,6 +841,7 @@ async function load() {
   try { conn = await api("/api/connections/match", { companies: packs.map((p) => p.company) }); } catch { conn = {}; }
   render();
   loadNetwork();
+  loadReplies();
 }
 setTimeout(async () => {
   if (ext) return;
@@ -1236,19 +1284,34 @@ $("sh-people").addEventListener("click", async (e) => {
 
 // ---- jobs tab ----
 let jobs = [];
+// India: in an Indian city. Remote: open to anywhere. Abroad: tied to another country (usually needs a visa).
+const WHERE = [["all", "All", "Every matching job"], ["india", "India", "Jobs in Indian cities, or remote within India"],
+  ["remote", "Remote", "Remote jobs open to anywhere in the world"], ["abroad", "Abroad", "Jobs in other countries, or remote only there; most need a work visa"]];
+let where = "india";
+try { where = localStorage.getItem("ak-where") || "india"; } catch {}
+$("j-where").onclick = (e) => {
+  const b = e.target.closest("button[data-w]"); if (!b) return;
+  where = b.dataset.w;
+  try { localStorage.setItem("ak-where", where); } catch {}
+  loadJobs();
+};
 async function loadJobs() {
   try {
     const [r, a] = await Promise.all([api("/api/jobs"), api("/api/auto")]);
     // Best fit first; unscored jobs by date after them. Already-applied companies hidden unless you ask.
     allJobs = r.jobs;
-    jobs = r.jobs.filter((j) => !(j.applied && $("j-hide").checked))
+    const shown = r.jobs.filter((j) => !(j.applied && $("j-hide").checked));
+    const n = (w) => shown.filter((j) => w === "all" || (j.region || "india") === w).length;
+    $("j-where").innerHTML = WHERE.map(([w, label, tip]) =>
+      `<button data-w="${w}" class="${w === where ? "on" : ""}" title="${tip}">${label}<span class="n">${n(w)}</span></button>`).join("");
+    jobs = shown.filter((j) => where === "all" || (j.region || "india") === where)
       .sort((x, y) => (y.fit?.fit ?? -1) - (x.fit?.fit ?? -1) || String(y.posted).localeCompare(String(x.posted)));
     $("c-jobs").textContent = jobs.length;
-    const unscored = r.jobs.filter((j) => !j.fit && !j.applied).length;
+    const unscored = jobs.filter((j) => !j.fit && !j.applied).length;
     $("j-score").innerHTML = `${ic("spark")}${unscored ? `Score ${unscored} new with Claude` : "All jobs scored"}`;
     $("j-score").title = "Claude rates how well each job matches your profile, out of 100";
     $("j-meta").textContent = (r.scannedAt ? `Last checked ${new Date(r.scannedAt).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" })}. ` : "Not checked yet. ")
-      + "Live openings from company job boards (Ashby, Greenhouse, Lever) that match your profile."
+      + "Live openings from company job boards (Ashby, Greenhouse, Lever), Wellfound and Himalayas that match your profile."
       + (a.enabled ? ` Recruiters found automatically today: ${a.doneToday} of ${a.perDay}${a.running ? " (running now)" : ""}.` : "");
     renderHome();
     $("j-auto").checked = a.enabled;
@@ -1261,7 +1324,7 @@ async function loadJobs() {
         <td class="hide-sm muted xs loc" title="${esc(j.location)}">${esc(j.location)}</td>
         <td class="muted xs nowrap">${esc(fmtDay(j.posted))}</td>
         <td>${j.people === null ? `<button class="btn sm" data-j="${i}" title="Find the recruiters and hiring managers there, and draft a message">${ic("users")}Find recruiters</button>` : `<button class="btn sm" data-j="${i}">${ic("users")}${j.people} ${j.people === 1 ? "person" : "people"}</button>`}</td>
-      </tr>`).join("") || `<tr><td colspan="6"><div class="empty">${ic("refresh")}<div>No jobs yet.</div><div class="xs">Click <b>Scan for new jobs</b> to pull live openings that match your profile (about 30 seconds).</div></div></td></tr>`;
+      </tr>`).join("") || `<tr><td colspan="6"><div class="empty">${ic("refresh")}<div>No jobs yet.</div><div class="xs">Click <b>Scan for new jobs</b> to pull live openings that match your profile (about a minute).</div></div></td></tr>`;
   } catch (e) { $("jobs").innerHTML = `<tr><td colspan="6" class="muted xs">Couldn't load jobs: ${esc(e.message)}</td></tr>`; }
 }
 $("jobs").addEventListener("click", (e) => {
@@ -1280,7 +1343,7 @@ $("jobs").addEventListener("click", (e) => {
 $("j-scan").onclick = async () => {
   $("j-scan").disabled = true;
   $("j-scan").innerHTML = '<span class="spin"></span>Scanning…';
-  toast("Looking for new jobs", "Checking company job boards, about 30 seconds…", 60000);
+  toast("Looking for new jobs", "Checking company job boards, Wellfound and Himalayas, about a minute…", 60000);
   try { const r = await api("/api/jobs/scan", {}); toast(`Found ${r.count} jobs that match you`, "Click Score with Claude to rank them."); }
   catch (e) { toast("Scan failed", e.message); }
   $("j-scan").disabled = false;
@@ -1290,7 +1353,7 @@ $("j-scan").onclick = async () => {
 $("j-score").onclick = async () => {
   $("j-score").disabled = true;
   $("j-score").innerHTML = '<span class="spin"></span>Claude is scoring…';
-  try { const r = await api("/api/jobs/score", {}); toast(r.scored ? `Scored ${r.scored} jobs${r.left ? `, ${r.left} left: press again` : ""}` : "Nothing new to score"); }
+  try { const r = await api("/api/jobs/score", { region: where }); toast(r.scored ? `Scored ${r.scored} jobs${r.left ? `, ${r.left} left: press again` : ""}` : "Nothing new to score"); }
   catch (e) { toast("Scoring failed: " + e.message); }
   $("j-score").disabled = false;
   loadJobs();

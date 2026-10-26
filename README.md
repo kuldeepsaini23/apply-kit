@@ -17,7 +17,7 @@ Built in October 2026 with Claude Code.
 - **Referrals**: import LinkedIn's `Connections.csv` and see who you know at each company, with a drafted referral ask.
 - **Dashboard** (`localhost:4777`): your pipeline of prepared applications, an applications funnel (applied, replied, interview, offer) with reply rate per channel, and an outreach log.
 - **RAG over your own notes**: point `docs` in `server/config.json` at your markdown notes (project write-ups, past achievements). Every Claude call retrieves the most relevant facts with hybrid search and adds them to the prompt, so answers use the right details instead of one fixed profile.
-- **Board scanner** (`tools/scan-boards.py`): pulls live roles from Ashby, Greenhouse and Lever job boards and filters them to your profile.
+- **Board scanner** (`tools/scan-boards.py`): pulls live roles from Ashby, Greenhouse and Lever job boards, Wellfound (public role pages) and Himalayas, and filters them to your profile.
 
 ## Hosted dashboard
 
