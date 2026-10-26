@@ -63,7 +63,7 @@ async function claude(prompt: string, { web = false, read = "", gmail = false } 
     // The Gmail connector comes from your claude.ai account, so that mode can't use --strict-mcp-config.
     ["claude", "-p", "--model", MODEL, ...tools, "--no-session-persistence", "--setting-sources", "", ...(gmail ? [] : ["--strict-mcp-config"]),
      "--system-prompt-file", contextFile(), "--output-format", "json"],
-    { stdin: new Blob([prompt]), stdout: "pipe", stderr: "pipe", cwd: DATA },
+    { stdin: new Blob([prompt]), stdout: "pipe", stderr: "pipe", cwd: DATA, windowsHide: true },
   );
   const [out, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
   await proc.exited;
@@ -373,7 +373,7 @@ const routes: Record<string, (b: any) => Promise<any> | any> = {
   // ---- Setup: what a new user enters in the dashboard instead of editing files ----
   "GET /api/setup": async () => {
     let claudeInstalled = false;
-    try { const p = Bun.spawn(["claude", "--version"], { stdout: "pipe", stderr: "pipe" }); claudeInstalled = (await p.exited) === 0; } catch {}
+    try { const p = Bun.spawn(["claude", "--version"], { stdout: "pipe", stderr: "pipe", windowsHide: true }); claudeInstalled = (await p.exited) === 0; } catch {}
     return {
       claudeInstalled, profile: profileDone(readJson(PROFILE, null)), resume: existsSync(RESUME), facts: existsSync(FACTS) || existsSync(join(DIR, "context.md")),
       privateContext: existsSync(join(DIR, "context.md")),
@@ -493,7 +493,7 @@ Return ONLY JSON: {"scores":[{"i":0,"fit":0,"why":"under 12 words"}]}`;
     return { scored: got.length, left };
   },
   "POST /api/jobs/scan": async () => {
-    const proc = Bun.spawn(["python", "tools/scan-boards.py", JOBS], { cwd: join(DIR, ".."), stdout: "pipe", stderr: "pipe" });
+    const proc = Bun.spawn(["python", "tools/scan-boards.py", JOBS], { cwd: join(DIR, ".."), stdout: "pipe", stderr: "pipe", windowsHide: true });
     const timer = setTimeout(() => proc.kill(), 5 * 60 * 1000);
     const [out, err] = await Promise.all([new Response(proc.stdout).text(), new Response(proc.stderr).text()]);
     clearTimeout(timer);
